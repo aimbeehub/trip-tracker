@@ -1,0 +1,29 @@
+{
+  "name": "trip-fund-tracker",
+  "version": "1.0.0",
+  "description": "Personal finance app for single mothers saving for family adventures",
+  "main": "trip-fund-tracker-dashboard.html",
+  "scripts": {
+    "start": "echo 'Static site - serve with vercel'",
+    "build": "echo 'Static site - no build required'",
+    "dev": "python3 -m http.server 3000 || python -m SimpleHTTPServer 3000"
+  },
+  "keywords": [
+    "finance",
+    "savings",
+    "budget",
+    "family",
+    "tracker",
+    "app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/trip_tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/trip_tracker/issues"
+  },
+  "homepage": "https://github.com/yourusername/trip_tracker#readme"
+}

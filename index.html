@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Fund Tracker - Save for Family Adventures</title>
+    <meta name="description" content="Track savings for family trips. Personalized finance app for single mothers. No accounts needed, 100% private.">
+    <meta name="theme-color" content="#2196F3">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #F4C430;
+            --secondary: #FF9800;
+            --accent: #2196F3;
+            --background: #F5F5F5;
+            --text-primary: #212121;
+            --text-secondary: #666666;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--background);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        header {
+            background: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #F4C430 0%, #FFF8DC 100%);
+            padding: 4rem 2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            background: #1976D2;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .emoji {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+
+        .cta-section {
+            background: white;
+            padding: 3rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-section h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        footer {
+            background: var(--text-primary);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .links {
+            margin-top: 1rem;
+        }
+
+        .links a {
+            color: var(--secondary);
+            text-decoration: none;
+            margin: 0 1rem;
+            font-weight: 600;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .hero h2 {
+                font-size: 1.8rem;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🌍 Trip Fund Tracker</h1>
+            <p>Save for family adventures with personalized finance tracking</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Ready to Plan Your Family Adventure?</h2>
+            <p>Track savings, engage family members, and stay motivated with daily affirmations and financial wisdom.</p>
+            <a href="/trip-fund-tracker-dashboard.html" class="btn">Launch App →</a>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3><span class="emoji">🎯</span>Personalized Greeting</h3>
+                <p>Time-dependent good morning/afternoon/evening messages with your custom name.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3><span class="emoji">💰</span>Financial Tracking</h3>
+                <p>Log multiple income sources, track progress, and analyze spending patterns.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3><span class="emoji">👨‍👩‍👧‍👦</span>Family Contributors</h3>
+                <p>Add up to 5 children with custom avatars to track everyone's contributions.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3><span class="emoji">🗺️</span>Trip Planning</h3>
+                <p>Plan destinations, estimate costs, and create wishlists for your dream vacation.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3><span class="emoji">📊</span>Visual Analytics</h3>
+                <p>Beautiful charts and dashboards to visualize your progress toward your goal.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3><span class="emoji">🧘‍♀️</span>Daily Motivation</h3>
+                <p>32 affirmations and 18 financial wisdom principles to keep you inspired.</p>
+            </div>
+        </section>
+
+        <section class="cta-section">
+            <h2>No Setup Required</h2>
+            <p>100% private • No accounts • No servers • All data stays in your browser</p>
+            <a href="/trip-fund-tracker-dashboard.html" class="btn">Get Started Now →</a>
+        </section>
+    </main>
+
+    <footer>
+        <p><strong>Trip Fund Tracker</strong></p>
+        <p>Making family adventures possible, one dollar at a time. 🌍✨</p>
+        <div class="links">
+            <a href="/README.md">Documentation</a>
+            <a href="https://github.com/yourusername/trip_tracker">GitHub</a>
+        </div>
+        <p style="margin-top: 2rem; font-size: 0.9rem; color: #999;">
+            © 2026 Trip Fund Tracker. Open source MIT license.
+        </p>
+    </footer>
+</body>
+</html>

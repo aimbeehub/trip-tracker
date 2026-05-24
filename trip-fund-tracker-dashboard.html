@@ -1,0 +1,3037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Fund Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Yellow Palette */
+            --primary: #F4C430;
+            --primary-light: #FFF8DC;
+            
+            /* Orange Palette */
+            --secondary: #FF9800;
+            --secondary-light: #FFE4CC;
+            
+            /* Red/Coral Palette */
+            --accent-blue: #FF6347;
+            --accent-blue-light: #FFB3A3;
+            
+            /* Pink Palette */
+            --accent-green: #E91E63;
+            --accent-green-light: #F8BBD0;
+            
+            /* Blue Palette */
+            --accent-yellow: #2196F3;
+            --accent-yellow-light: #BBDEFB;
+            
+            /* Additional Colors */
+            --accent-pink: #E91E63;
+            --accent-pink-light: #F8BBD0;
+            
+            --accent-orange: #FF9800;
+            --accent-orange-light: #FFE4CC;
+            
+            --accent-coral: #FF6347;
+            --accent-coral-light: #FFB3A3;
+            
+            --accent-teal: #2196F3;
+            --accent-teal-light: #BBDEFB;
+            
+            --accent-deep-blue: #1976D2;
+            --accent-deep-blue-light: #90CAF9;
+            
+            /* Neutrals */
+            --background: #F5F5F5;
+            --surface: #FFFFFF;
+            --border: #E0E0E0;
+            
+            /* Text */
+            --text-primary: #212121;
+            --text-secondary: #666666;
+            
+            /* Interactive */
+            --hover: #FF9800;
+            --hover-dark: #FF6347;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        html, body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .date-range {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-full {
+            grid-column: 1 / -1;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .metric-large {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Donut Chart Container */
+        .donut-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            position: relative;
+        }
+
+        .donut-canvas {
+            max-width: 150px;
+            max-height: 150px;
+        }
+
+        .donut-center {
+            position: absolute;
+            text-align: center;
+        }
+
+        .donut-center-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .donut-center-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        /* Bar Chart */
+        .bar-chart {
+            margin-top: 1rem;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .bar-label {
+            flex: 0 0 120px;
+            font-weight: 600;
+        }
+
+        .bar-background {
+            flex: 1;
+            height: 20px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .bar-value {
+            flex: 0 0 80px;
+            text-align: right;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            font-size: 0.9rem;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--background);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: var(--background);
+        }
+
+        tr.highlighted {
+            background: var(--background);
+            font-weight: 600;
+        }
+
+        .amount {
+            text-align: right;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'SF Mono', monospace;
+        }
+
+        .amount.positive {
+            color: var(--accent-green);
+        }
+
+        .amount.negative {
+            color: var(--accent-pink);
+        }
+
+        /* Mini Stats */
+        .mini-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .mini-stat {
+            padding: 1rem;
+            background: var(--background);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .mini-stat-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .mini-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Color Legend */
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: -1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--accent-yellow);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--accent-yellow) 0%, var(--accent-yellow-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--background);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--secondary);
+            color: var(--secondary);
+            background: var(--secondary-light);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid var(--border);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 32px;
+            height: 32px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+        }
+
+        .modal-header {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Line Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* Success Message */
+        .success-message {
+            background: var(--accent-green);
+            color: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-section {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1.5rem 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .mini-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-section {
+                gap: 2rem;
+            }
+
+            .legend {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Banner Image Section -->
+        <div style="margin-bottom: 2rem;">
+            <div id="bannerContainer" style="position: relative; width: 100%; height: 250px; background: linear-gradient(135deg, #F4C430 0%, #FFF8DC 100%); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="document.getElementById('bannerUpload').click()">
+                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.15; background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABICAYAAACytED1AAAAl0lEQVR4nO3PMQEAAAggCJNfzbDgTwCN3oAAAAAAAPBvVzEAAQrPFrABCs8WsAEKzxawAQrPFrABCs8WsAEKzxawAQrPFrABCs8WsAEKzxawAQrPFrABCs8WsAEKzxawAQrPFrABCs8WsAEKzxawAQrPFrABCs8WsAEKzxawAQrPFrABCs8W0AABGwWZu5cYAQAAAABJRU5ErkJggg=='); pointer-events: none;"></div>
+                <div id="bannerImage" style="width: 100%; height: 100%; object-fit: cover; display: none;"></div>
+                <div id="bannerPlaceholder" style="text-align: center; color: white; position: relative; z-index: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🖼️</div>
+                    <div style="font-size: 1.1rem; font-weight: 600;">Click to upload banner image</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Make your trip vision pop!</div>
+                </div>
+                <button class="btn btn-secondary" style="position: absolute; bottom: 1rem; right: 1rem; z-index: 10;" onclick="event.stopPropagation(); document.getElementById('bannerUpload').click()">Change</button>
+            </div>
+            <input type="file" id="bannerUpload" accept="image/*" style="display: none;" onchange="uploadBanner(event)">
+        </div>
+
+        <!-- Clear Banner Button -->
+        <div style="text-align: right; margin-bottom: 0.75rem;">
+            <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="clearBanner()">Clear Banner</button>
+        </div>
+
+    <div class="container" style="padding-top: 1rem;">
+        <!-- Greeting Section -->
+        <div style="margin-bottom: 1.5rem;">
+            <h2 id="greeting" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.5rem 0;">Good morning</h2>
+            <p id="greetingName" style="font-size: 1.1rem; color: var(--text-secondary); margin: 0;">Welcome back! Let's make today count.</p>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>Trip Fund Tracker</h1>
+                <p id="userName" style="margin-top: 0.5rem;">Your journey to adventure</p>
+            </div>
+            <div class="date-range">
+                <span id="dateRangeDisplay">Set your dates in Trip Plan</span>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="trip">Trip Plan</button>
+            <button class="tab-btn" data-tab="analytics">Analytics</button>
+            <button class="tab-btn" data-tab="affirmations">Affirmations</button>
+            <button class="tab-btn" data-tab="lessons">Financial Wisdom</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active">
+            <!-- Main Progress Card -->
+            <div class="dashboard-grid">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Savings Progress</div>
+                            <div class="card-subtitle" style="margin-top: 0.5rem;">Your goal</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="metric-label">Status</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--accent-green); margin-top: 0.25rem;" id="statusDisplay">On track</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <div>
+                            <div class="metric-large" id="savedDisplay">$0</div>
+                            <div class="metric-label">Amount Saved</div>
+
+                            <div style="margin-top: 2rem;">
+                                <div class="metric-label">Of Goal</div>
+                                <div class="metric-large" id="goalDisplay" style="font-size: 1.8rem;">$0</div>
+                            </div>
+                        </div>
+
+                        <div class="donut-container">
+                            <div style="position: relative; width: 150px; height: 150px;">
+                                <canvas id="progressChart" class="donut-canvas"></canvas>
+                                <div class="donut-center">
+                                    <div class="donut-center-value" id="percentDisplay">0%</div>
+                                    <div class="donut-center-label">Complete</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mini-stats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="remainingMetric">$0</div>
+                            <div class="mini-stat-label">Still Need</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-value" id="nextMilestoneMetric">-</div>
+                            <div class="mini-stat-label">Next Milestone</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Income by Source -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Income Sources</div>
+                        </div>
+                    </div>
+
+                    <div class="bar-chart" id="incomeBySourceChart">
+                        <div class="empty-state">
+                            <p>No income logged</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Recent Activity</div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="recentTransactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Source</th>
+                                    <th class="amount">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transactions</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="openModal('logIncomeModal')">Log Income</button>
+                </div>
+
+                <!-- Monthly Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Milestones</div>
+                        </div>
+                    </div>
+
+                    <div id="milestonesDisplay" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="empty-state" style="padding: 2rem 0;">
+                            <p>Set your goal in Settings</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Balance Trend -->
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Savings Trend</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRIP PLAN TAB -->
+        <div id="trip" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Trip Details</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <div class="form-group">
+                                <label>Destination</label>
+                                <input type="text" id="destination" placeholder="Where are you going?">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Travelers</label>
+                                <input type="text" id="travelers" placeholder="You & your child">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Target Date</label>
+                                <input type="date" id="tripDate" onchange="updateMetrics()">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="form-group">
+                                <label>Trip Purpose</label>
+                                <textarea id="tripDescription" placeholder="Why is this trip important?" rows="6" style="resize: none;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveTripDetails()">Save Trip Details</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Savings Goal</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Goal Amount ($)</label>
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem;">
+                            <input type="number" id="tripGoalAmount" placeholder="5000" min="0" step="0.01">
+                            <button class="btn btn-primary" onclick="saveTripGoal()" style="padding: 0.75rem 1.5rem;">Save Goal</button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; background: var(--background); border-radius: 8px; margin-top: 1rem;">
+                        <div class="metric-label">Current Progress</div>
+                        <div id="goalProgress" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+                            <div>
+                                <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-green);" id="yourSavings">$0</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Your Savings</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-blue);" id="childSavings">$0</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Child's Savings</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Saved</div>
+                            <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary);" id="totalGoalProgress">$0 / $0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Trip Vision</div>
+                    </div>
+
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Add photos of your dream destination to stay inspired</p>
+
+                    <div id="photoGallery" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem; min-height: 200px;">
+                        <div style="background: var(--background); border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--text-secondary);">
+                            <p>No photos yet. Upload some!</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem;">
+                        <input type="file" id="photoUpload" accept="image/*" style="padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px;">
+                        <button class="btn btn-secondary" onclick="addPhoto()">Add Photo</button>
+                    </div>
+
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 0.75rem;" onclick="clearPhotos()">Clear All Photos</button>
+                </div>
+
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Family Contributors</div>
+                    </div>
+
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">Click any avatar to upload a photo</p>
+
+                    <div id="contributorsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 2rem; padding: 1rem 0;">
+                        <!-- Parent Avatar -->
+                        <div style="text-align: center;">
+                            <div id="parentAvatarContainer" style="width: 100px; height: 100px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #FF9800 0%, #FFE4CC 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid var(--border); transition: all 0.3s; font-size: 3rem;" onclick="document.getElementById('parentAvatarUpload').click()" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                👩
+                            </div>
+                            <div style="font-weight: 700; margin-bottom: 0.5rem;">You</div>
+                            <input type="file" id="parentAvatarUpload" accept="image/*" style="display: none;" onchange="uploadParentAvatar(event)">
+                            <button class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.5rem;" onclick="document.getElementById('parentAvatarUpload').click()">Upload Photo</button>
+                        </div>
+
+                        <!-- Children Avatars -->
+                        <div id="childrenAvatars" style="display: contents;">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Trip Cost Estimator</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label>From (Your City)</label>
+                            <input type="text" id="originCity" placeholder="e.g., New York" onchange="calculateTripCost()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>To (Destination)</label>
+                            <input type="text" id="destinationCity" placeholder="e.g., Paris" onchange="calculateTripCost()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Trip Duration (Days)</label>
+                            <input type="number" id="tripDuration" placeholder="7" min="1" max="365" value="7" onchange="calculateTripCost()">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 2rem; padding: 1rem; background: var(--background); border-radius: 8px;">
+                        <div>
+                            <label class="metric-label">Flights (Est.)</label>
+                            <input type="number" id="flightCost" placeholder="600" min="0" onchange="calculateTripCost()">
+                        </div>
+                        <div>
+                            <label class="metric-label">Hotel/Night (Est.)</label>
+                            <input type="number" id="hotelCostPerNight" placeholder="100" min="0" onchange="calculateTripCost()">
+                        </div>
+                        <div>
+                            <label class="metric-label">Daily Activities</label>
+                            <input type="number" id="dailyActivities" placeholder="75" min="0" onchange="calculateTripCost()">
+                        </div>
+                        <div>
+                            <label class="metric-label">Food/Day (Est.)</label>
+                            <input type="number" id="dailyFood" placeholder="50" min="0" onchange="calculateTripCost()">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 2rem; background: var(--accent-blue); border-radius: 8px; color: white;">
+                        <div>
+                            <div class="metric-label" style="color: rgba(255,255,255,0.9);">Estimated Total Cost</div>
+                            <div style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 0.5rem;" id="estimatedTotalCost">$0</div>
+                        </div>
+                        <div>
+                            <div class="metric-label" style="color: rgba(255,255,255,0.9);">Savings Needed</div>
+                            <div style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 0.5rem;" id="savingsNeeded">$0</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem; color: rgba(255,255,255,0.8);" id="savingsDescription">Set your trip details to calculate</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn btn-primary" onclick="applyEstimatedCost()">Use This as My Savings Goal</button>
+                    </div>
+                </div>
+
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Wishlist Activities</div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="wishlistTable">
+                            <thead>
+                                <tr>
+                                    <th>Activity</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="2" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Add activities</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; margin-top: 1rem;">
+                        <input type="text" id="newWishlistItem" placeholder="Add activity...">
+                        <button class="btn btn-secondary" onclick="addWishlistItem()">Add</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- AFFIRMATIONS TAB -->
+        <div id="affirmations" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Daily Affirmations</div>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Read daily to strengthen your abundance mindset</p>
+                    <div id="affirmationsDisplay" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINANCIAL WISDOM TAB -->
+        <div id="lessons" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Financial Wisdom for Your Journey</div>
+                    </div>
+                    <div id="lessonsDisplay" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS TAB -->
+        <div id="analytics" class="tab-content">
+            <div class="dashboard-grid">
+                <!-- Child Contributions Section -->
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Family Contributions</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                        <div style="padding: 1.5rem; background: var(--background); border-radius: 8px; border: 1px solid var(--border);">
+                            <div class="metric-label">Your Contribution</div>
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--accent-green); margin-top: 0.5rem;" id="parentContribTotal">$0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;" id="parentPercentage">0%</div>
+                        </div>
+
+                        <div style="padding: 1.5rem; background: var(--background); border-radius: 8px; border: 1px solid var(--border);">
+                            <div class="metric-label">Child's Contribution</div>
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--accent-blue); margin-top: 0.5rem;" id="childContribTotal">$0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;" id="childPercentage">0%</div>
+                        </div>
+
+                        <div style="padding: 1.5rem; background: var(--background); border-radius: 8px; border: 1px solid var(--border);">
+                            <div class="metric-label">Combined Total</div>
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--primary); margin-top: 0.5rem;" id="combinedTotal">$0</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; font-weight: 600;" id="goingTo">Towards your goal</div>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--background); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+                        <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Progress</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.5rem;">Your Share</div>
+                                <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                                    <div id="parentProgressBar" style="height: 100%; background: var(--accent-green); width: 0%; border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.5rem;">Child's Share</div>
+                                <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                                    <div id="childProgressBar" style="height: 100%; background: var(--accent-blue); width: 0%; border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="openModal('logIncomeModal')">Log Your Income</button>
+                        <button class="btn btn-secondary" onclick="openModal('childIncomeModal')">Log Child's Contribution</button>
+                        <button class="btn btn-secondary" onclick="viewChildTransactions()">View Child's History</button>
+                    </div>
+                </div>
+
+                <!-- Budget Overview Section -->
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Budget Overview</div>
+                        <div class="card-subtitle">Planned vs. Actual</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <!-- Bar Chart -->
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Income Progress</h4>
+                            <div class="bar-chart" id="budgetBarChart">
+                                <div class="empty-state" style="padding: 2rem 0;">
+                                    <p>No data</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Donut Chart -->
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Income Distribution</h4>
+                            <div class="donut-container" style="min-height: 280px;">
+                                <div style="position: relative; width: 150px; height: 150px;">
+                                    <canvas id="incomeDistributionChart"></canvas>
+                                    <div class="donut-center">
+                                        <div class="donut-center-value" id="totalIncomeValue">$0</div>
+                                        <div class="donut-center-label">Total</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Breakdown -->
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Monthly Summary</div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="monthlySummaryTable">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th class="amount">Total</th>
+                                    <th class="amount">Cumulative</th>
+                                    <th style="width: 100px;">Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No data</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Calendar View -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Activity Calendar</div>
+                    </div>
+
+                    <div id="calendarContainer" style="font-size: 0.9rem;">
+                        <div class="empty-state" style="padding: 2rem 1rem;">
+                            <p>No transactions to display</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planner with Bar Graphs -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Income Planner</div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em;">Monthly Goals</h4>
+                        <div class="bar-chart" id="monthlyGoalsChart">
+                            <div class="empty-state" style="padding: 1rem 0;">
+                                <p style="font-size: 0.85rem;">Set your goal in Settings</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overview Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Overview</div>
+                    </div>
+
+                    <div class="table-container">
+                        <table style="margin-top: 0;">
+                            <tbody id="overviewTable">
+                                <tr class="highlighted">
+                                    <td style="font-weight: 700;">Total Saved</td>
+                                    <td class="amount" style="font-weight: 700; color: var(--accent-green);" id="overviewTotalSaved">$0</td>
+                                </tr>
+                                <tr>
+                                    <td>Goal Amount</td>
+                                    <td class="amount" id="overviewGoalAmount">$0</td>
+                                </tr>
+                                <tr>
+                                    <td>Remaining</td>
+                                    <td class="amount negative" id="overviewRemaining">$0</td>
+                                </tr>
+                                <tr>
+                                    <td>Progress</td>
+                                    <td class="amount" style="color: var(--accent-blue);" id="overviewProgress">0%</td>
+                                </tr>
+                                <tr>
+                                    <td>Avg Monthly</td>
+                                    <td class="amount" id="overviewAvgMonthly">$0</td>
+                                </tr>
+                                <tr>
+                                    <td>Income Sources</td>
+                                    <td class="amount" id="overviewSources">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Income Log -->
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Income Log</div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="incomeTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Source</th>
+                                    <th>Notes</th>
+                                    <th class="amount">Amount</th>
+                                    <th style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transactions logged</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="openModal('logIncomeModal')">Log Income</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="settings" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Profile</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="userName" placeholder="Your name">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Goal Amount ($)</label>
+                        <input type="number" id="goalAmount" placeholder="10000" min="0" onchange="updateMetrics()">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Data Management</div>
+                    </div>
+
+                    <button class="btn btn-secondary" style="width: 100%; margin-bottom: 0.75rem;" onclick="exportData()">Export Data</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-bottom: 0.75rem;" onclick="importData()">Import Data</button>
+                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="handleImport(event)">
+                    <button class="btn btn-secondary" style="width: 100%; margin-bottom: 0.75rem;" onclick="resetData()">Clear Data</button>
+                </div>
+
+                <div class="card dashboard-full">
+                    <div class="card-header">
+                        <div class="card-title">Privacy</div>
+                    </div>
+                    <p style="color: var(--text-secondary); line-height: 1.7;">
+                        All your data is stored locally on your device. Nothing is sent to a server. Your trip savings goal and financial information remain completely private and secure.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="logIncomeModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('logIncomeModal')">×</button>
+            <h2 class="modal-header">Log Income</h2>
+
+            <div class="form-group">
+                <label>Amount ($)</label>
+                <input type="number" id="incomeAmount" placeholder="0.00" min="0" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>Source</label>
+                <select id="incomeSource">
+                    <option value="">Select source</option>
+                    <option value="Tips">Tips</option>
+                    <option value="Bonus">Bonus</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Cashback">Cashback</option>
+                    <option value="Gift">Gift</option>
+                    <option value="Lemonade Stand">Lemonade Stand</option>
+                    <option value="Tag Sale">Tag Sale</option>
+                    <option value="Facebook Marketplace">Facebook Marketplace</option>
+                    <option value="Chores">Chores</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="incomeDate">
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="incomeNotes" placeholder="Optional notes" rows="2"></textarea>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="logIncome()">Log Income</button>
+        </div>
+    </div>
+
+    <!-- Child Income Modal -->
+    <div id="childIncomeModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('childIncomeModal')">×</button>
+            <h2 class="modal-header">Log Child's Contribution</h2>
+
+            <div class="form-group">
+                <label>Select Child</label>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem;">
+                    <select id="childSelector">
+                        <option value="">Select or add a child</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="openAddChildModal()">+ Add Child</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Amount ($)</label>
+                <input type="number" id="childIncomeAmount" placeholder="0.00" min="0" step="0.01">
+            </div>
+
+            <div class="form-group">
+                <label>How They Earned It</label>
+                <select id="childIncomeSource">
+                    <option value="">Select source</option>
+                    <option value="Chores">Chores</option>
+                    <option value="Allowance">Allowance</option>
+                    <option value="Babysitting">Babysitting</option>
+                    <option value="Lemonade Stand">Lemonade Stand</option>
+                    <option value="Tag Sale">Tag Sale</option>
+                    <option value="Facebook Marketplace">Facebook Marketplace</option>
+                    <option value="Birthday Gift">Birthday Gift</option>
+                    <option value="Job">Part-time Job</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="childIncomeDate">
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="childIncomeNotes" placeholder="e.g., 'Washed the car' or 'Yard work'" rows="2"></textarea>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="logChildIncome()">Log Contribution</button>
+        </div>
+    </div>
+
+    <!-- Add Child Modal -->
+    <div id="addChildModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('addChildModal')">×</button>
+            <h2 class="modal-header">Add a Child</h2>
+
+            <div id="childLimitWarning" style="display: none; background: #FEE2E2; border: 1px solid #FECACA; color: #991B1B; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <strong>Max 5 Children:</strong> You can add up to 5 children as contributors. Delete one to add another.
+            </div>
+
+            <div class="form-group">
+                <label>Child's Name</label>
+                <input type="text" id="newChildName" placeholder="e.g., Alex, Jordan, Sam">
+            </div>
+
+            <div class="form-group">
+                <label>Age (Optional)</label>
+                <input type="number" id="newChildAge" placeholder="14" min="0" max="100">
+            </div>
+
+            <div class="form-group">
+                <label>Avatar Picture (Optional)</label>
+                <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer;" onclick="document.getElementById('childAvatarUpload').click()">
+                    <div id="childAvatarPreview" style="font-size: 3rem; margin-bottom: 0.5rem;">👶</div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">Click to upload avatar</div>
+                </div>
+                <input type="file" id="childAvatarUpload" accept="image/*" style="display: none;" onchange="previewChildAvatar(event)">
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-bottom: 0.75rem;" onclick="saveNewChild()">Add Child</button>
+            <button class="btn btn-secondary" style="width: 100%;" onclick="closeModal('addChildModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Child Transactions Modal -->
+    <div id="childTransactionsModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+            <button class="modal-close" onclick="closeModal('childTransactionsModal')">×</button>
+            <h2 class="modal-header">Children's Contribution History</h2>
+
+            <div id="childrenSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <!-- Populated by JavaScript -->
+            </div>
+
+            <div class="table-container">
+                <table id="childTransactionsTable" style="width: 100%; font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Child</th>
+                            <th>Source</th>
+                            <th class="amount">Amount</th>
+                            <th style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No contributions logged</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" onclick="closeModal('childTransactionsModal')">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'tripFundData';
+
+        const defaultData = {
+            userName: '',
+            goalAmount: 0,
+            tripDate: '',
+            destination: '',
+            tripDescription: '',
+            travelers: '',
+            wishlist: [],
+            income: [],
+            lastUpdated: new Date().toISOString()
+        };
+
+        let progressChart = null;
+        let trendChart = null;
+        let incomeDistributionChart = null;
+
+        const affirmations = {
+            manifestations: [
+                { icon: '💰', text: 'Money flows to me easily and abundantly from multiple sources.' },
+                { icon: '🌟', text: 'Every dollar I earn is a step closer to this adventure with my child.' },
+                { icon: '✨', text: 'I attract unexpected financial blessings and windfalls.' },
+                { icon: '💎', text: 'My worth is not measured by money—I am worthy of abundance.' },
+                { icon: '🎯', text: 'I am financially wise and make decisions that serve my dreams.' },
+                { icon: '🌈', text: 'Prosperity flows through every aspect of my life.' },
+                { icon: '🚀', text: 'My side hustles and efforts multiply my income in unexpected ways.' },
+                { icon: '👑', text: 'I am a money magnet. Abundance seeks me out.' }
+            ],
+            abundance: [
+                { icon: '💵', text: 'Money is energy, and I am open to receiving it in all forms.' },
+                { icon: '📈', text: 'My income grows steadily as I take aligned action.' },
+                { icon: '🎁', text: 'I am grateful for every dollar, tip, and bonus that comes my way.' },
+                { icon: '💪', text: 'I am capable of earning whatever amount I set my mind to.' },
+                { icon: '🔥', text: 'My hustle is worthy, and my effort creates results.' },
+                { icon: '⭐', text: 'I release scarcity. There is more than enough for me.' },
+                { icon: '🌸', text: 'Financial freedom is my birthright, and I claim it.' },
+                { icon: '✅', text: 'Every contribution, no matter how small, is a victory.' }
+            ],
+            mother: [
+                { icon: '👩‍👧', text: 'I am creating irreplaceable memories with my child that money cannot buy.' },
+                { icon: '🌍', text: 'This trip is more than a vacation—it\'s a celebration of our bond.' },
+                { icon: '💝', text: 'My dedication to this goal shows my child what is possible.' },
+                { icon: '🎉', text: 'I deserve this adventure, and so does my child.' },
+                { icon: '🛫', text: 'Before my child launches into adulthood, we\'ll explore the world together.' },
+                { icon: '❤️', text: 'The time I spend saving is an investment in our relationship.' },
+                { icon: '🌟', text: 'I am modeling resilience, joy, and dream-building for my child.' },
+                { icon: '✈️', text: 'This trip will be a turning point—a moment we remember forever.' }
+            ],
+            gratitude: [
+                { icon: '🙏', text: 'I am grateful for the ability to work, earn, and save.' },
+                { icon: '😊', text: 'I celebrate every small win on this journey.' },
+                { icon: '💖', text: 'Thank you for the abundance that is already flowing to me.' },
+                { icon: '🌺', text: 'I am thankful for my strength, determination, and vision.' },
+                { icon: '🎊', text: 'Every milestone reached is proof that I can achieve my dreams.' },
+                { icon: '🌟', text: 'I am grateful for the journey, not just the destination.' },
+                { icon: '💫', text: 'My gratitude opens doors to even more blessings.' },
+                { icon: '🎯', text: 'I celebrate how far I\'ve come and how far I\'ll go.' }
+            ]
+        };
+
+        const richDadLessons = {
+            principles: [
+                { icon: '💰', title: 'Pay Yourself First', category: 'Core', content: 'Set aside money for your future before bills. You\'re already building wealth with your trip fund.', action: 'Treat your trip fund like your business—it gets paid first, always.' },
+                { icon: '🎯', title: 'Assets vs. Liabilities', category: 'Core', content: 'Assets put money in your pocket. Liabilities take it out. Know the difference.', action: 'Before buying, ask: Does this put money in my pocket or take it out?' },
+                { icon: '🧠', title: 'Financial Education is Power', category: 'Core', content: 'Understanding money breaks the poverty cycle. You\'re building this knowledge now.', action: 'Learn weekly. Share one lesson with your child. Make finance family culture.' },
+                { icon: '🔄', title: 'Money Works for You', category: 'Core', content: 'Instead of endless hours, create systems where money multiplies on its own.', action: 'Let savings earn interest. Can you create a second income stream?' },
+                { icon: '💼', title: 'Think Like an Owner', category: 'Core', content: 'You operate multiple income sources. You\'re already an entrepreneur in action.', action: 'Document your streams. Which is biggest? Can you double it?' },
+                { icon: '📊', title: 'Track Like a CEO', category: 'Core', content: 'Know your numbers. CEOs live by data. You\'re running your financial business here.', action: 'Review monthly. Watch patterns. Celebrate winners. Optimize losers.' }
+            ],
+            mindset: [
+                { icon: '🚫', title: 'Reject "I Can\'t Afford It"', category: 'Mindset', content: 'Poor Dad says "I can\'t." Rich Dad asks "How can I?" Choose action.', action: 'Ask "How can I earn this?" instead of accepting limits.' },
+                { icon: '⚡', title: 'Desire = Fuel', category: 'Mindset', content: 'Your desire for this trip is your superpower. Use it to drive action.', action: 'Keep your goal visible. Let desire fuel your earnings.' },
+                { icon: '🎓', title: 'Job ≠ Wealth', category: 'Mindset', content: 'Your paycheck is survival. Hustles and side gigs build wealth. Treat them differently.', action: 'Separate: Paycheck = bills. Hustles = savings. Save the wealth money.' },
+                { icon: '🧭', title: 'Grow Income, Not Expenses', category: 'Mindset', content: 'Rich people expand earnings. Poor people shrink spending. Choose expansion.', action: 'Ask "How can I earn $500 more?" instead of cutting.' },
+                { icon: '💪', title: 'You Are Your Asset', category: 'Mindset', content: 'Your skills, hustle, and determination are more valuable than any inheritance.', action: 'Invest in yourself. Learn skills that increase your earning power.' },
+                { icon: '🎪', title: 'Broke = Opportunity', category: 'Mindset', content: 'Tight cash means problem-solving. This is where wealth-builders are born.', action: 'Turn monthly challenges into next month\'s strategy.' }
+            ],
+            strategies: [
+                { icon: '📈', title: 'Multiple Income Streams', category: 'Strategies', content: 'Tips + Bonus + Freelance = faster growth. Diversification is security.', action: 'Create 2-3 income sources. Diversify your earnings.' },
+                { icon: '🎯', title: 'Optimize Winners', category: 'Strategies', content: 'Track your most profitable streams. Double down. Systems scale.', action: 'Monthly: Which stream grew most? Why? Replicate that success.' },
+                { icon: '💎', title: 'Protect Your Savings', category: 'Strategies', content: 'Trip fund is sacred. Non-negotiable. Build friction to access it.', action: 'Separate account. Make it slightly inconvenient to withdraw.' },
+                { icon: '🚀', title: 'Leverage Your Network', category: 'Strategies', content: 'You can\'t work 24/7. Leverage reputation, skills, relationships.', action: 'Ask: Who could refer business? Who needs my skills?' },
+                { icon: '🧮', title: 'Make it Concrete', category: 'Strategies', content: '$10K in 12 months = $833/month = $27/day. Concrete beats vague.', action: 'Break your goal into daily targets. Track daily, not yearly.' },
+                { icon: '🎓', title: 'Learn from Everything', category: 'Strategies', content: 'Failures are lessons. Adjust systems based on what you learn.', action: 'Monthly review: What worked? What didn\'t? Adjust next month.' }
+            ]
+        };
+
+        function getData() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : { ...defaultData };
+        }
+
+        function saveData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const data = getData();
+            const name = data.userName || 'Hi';
+            
+            let greeting = '';
+            let message = '';
+            
+            if (hour < 12) {
+                greeting = '☀️ Good morning';
+                message = `${name}, rise and shine! Today is full of possibilities.`;
+            } else if (hour < 18) {
+                greeting = '🌤️ Good afternoon';
+                message = `${name}, keep up the great work! You\'re doing amazing.`;
+            } else {
+                greeting = '🌙 Good evening';
+                message = `${name}, time to reflect on today\'s progress and rest well.`;
+            }
+            
+            const greetingElem = document.getElementById('greeting');
+            const greetingNameElem = document.getElementById('greetingName');
+            
+            if (greetingElem) greetingElem.textContent = greeting;
+            if (greetingNameElem) greetingNameElem.textContent = message;
+        }
+
+        function initApp() {
+            try {
+                renderBanner();
+                loadUI();
+                updateMetrics();
+                renderAffirmations();
+                renderLessons();
+                setToday();
+                updateGreeting();
+                console.log('App initialized successfully');
+            } catch(e) {
+                console.error('Error initializing app:', e);
+            }
+        }
+
+        function setToday() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const elem = document.getElementById('incomeDate');
+                if (elem) {
+                    elem.value = today;
+                }
+                const childElem = document.getElementById('childIncomeDate');
+                if (childElem) {
+                    childElem.value = today;
+                }
+            } catch(e) {
+                // Element doesn't exist yet, that's fine
+            }
+        }
+
+        function loadUI() {
+            try {
+                const data = getData();
+                const userNameEl = document.getElementById('userName');
+                if (userNameEl) {
+                    userNameEl.textContent = data.userName || 'Your journey to adventure';
+                }
+                const goalEl = document.getElementById('goalAmount');
+                if (goalEl) goalEl.value = data.goalAmount;
+                const tripGoalEl = document.getElementById('tripGoalAmount');
+                if (tripGoalEl) tripGoalEl.value = data.goalAmount;
+                const destEl = document.getElementById('destination');
+                if (destEl) destEl.value = data.destination;
+                const tripDescEl = document.getElementById('tripDescription');
+                if (tripDescEl) tripDescEl.value = data.tripDescription;
+                const travelersEl = document.getElementById('travelers');
+                if (travelersEl) travelersEl.value = data.travelers;
+                const tripDateEl = document.getElementById('tripDate');
+                if (tripDateEl) tripDateEl.value = data.tripDate;
+
+                // Load estimator fields if they exist in data
+                if (data.tripEstimate) {
+                    const originEl = document.getElementById('originCity');
+                    if (originEl) originEl.value = data.tripEstimate.originCity || '';
+                    const destCityEl = document.getElementById('destinationCity');
+                    if (destCityEl) destCityEl.value = data.tripEstimate.destinationCity || '';
+                    const durationEl = document.getElementById('tripDuration');
+                    if (durationEl) durationEl.value = data.tripEstimate.tripDuration || '7';
+                    const flightEl = document.getElementById('flightCost');
+                    if (flightEl) flightEl.value = data.tripEstimate.flightCost || '';
+                    const hotelEl = document.getElementById('hotelCostPerNight');
+                    if (hotelEl) hotelEl.value = data.tripEstimate.hotelCostPerNight || '';
+                    const activitiesEl = document.getElementById('dailyActivities');
+                    if (activitiesEl) activitiesEl.value = data.tripEstimate.dailyActivities || '';
+                    const foodEl = document.getElementById('dailyFood');
+                    if (foodEl) foodEl.value = data.tripEstimate.dailyFood || '';
+                }
+
+                renderRecentTransactions();
+                renderIncomeLog();
+                renderIncomeBySource();
+                renderMilestones();
+                renderWishlist();
+                renderMonthlySummary();
+                renderBudgetBarChart();
+                renderIncomeDistributionChart();
+                renderCalendarView();
+                renderMonthlyGoals();
+                renderOverviewStats();
+                renderPhotos();
+                renderChildContributions();
+                renderChildSelector();
+
+                calculateTripCost();
+            } catch(e) {
+                console.error('Error in loadUI:', e);
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            if (modalId === 'logIncomeModal') {
+                document.getElementById('incomeAmount').focus();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function logIncome() {
+            const amount = parseFloat(document.getElementById('incomeAmount').value);
+            const source = document.getElementById('incomeSource').value;
+            const date = document.getElementById('incomeDate').value;
+            const notes = document.getElementById('incomeNotes').value;
+
+            if (!amount || !source || !date) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const data = getData();
+            data.income.push({
+                id: Date.now(),
+                amount,
+                source,
+                date,
+                notes,
+                timestamp: new Date().toISOString()
+            });
+
+            saveData(data);
+            updateMetrics();
+            renderRecentTransactions();
+            renderIncomeLog();
+            renderIncomeBySource();
+            renderMilestones();
+            renderMonthlySummary();
+            renderBudgetBarChart();
+            renderIncomeDistributionChart();
+            renderCalendarView();
+            renderMonthlyGoals();
+            renderOverviewStats();
+
+            document.getElementById('incomeAmount').value = '';
+            document.getElementById('incomeSource').value = '';
+            document.getElementById('incomeNotes').value = '';
+            setToday();
+            
+            closeModal('logIncomeModal');
+            showSuccess('Income logged successfully');
+        }
+
+        function logChildIncome() {
+            const amount = parseFloat(document.getElementById('childIncomeAmount').value);
+            const source = document.getElementById('childIncomeSource').value;
+            const date = document.getElementById('childIncomeDate').value;
+            const childId = document.getElementById('childSelector').value;
+            const notes = document.getElementById('childIncomeNotes').value;
+
+            if (!amount || !source || !date || !childId) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const data = getData();
+            const child = data.children.find(c => c.id === childId);
+            if (!child) {
+                alert('Please select a valid child');
+                return;
+            }
+
+            if (!data.childIncome) {
+                data.childIncome = [];
+            }
+
+            data.childIncome.push({
+                id: Date.now(),
+                amount,
+                source,
+                date,
+                childId,
+                childName: child.name,
+                notes,
+                timestamp: new Date().toISOString()
+            });
+
+            saveData(data);
+            updateMetrics();
+            renderChildContributions();
+            renderIncomeLog();
+
+            document.getElementById('childSelector').value = '';
+            document.getElementById('childIncomeAmount').value = '';
+            document.getElementById('childIncomeSource').value = '';
+            document.getElementById('childIncomeNotes').value = '';
+            document.getElementById('childIncomeDate').value = new Date().toISOString().split('T')[0];
+            
+            closeModal('childIncomeModal');
+            showSuccess('Child contribution logged successfully');
+        }
+
+        function renderChildSelector() {
+            const data = getData();
+            const children = data.children || [];
+            const selector = document.getElementById('childSelector');
+            
+            if (!selector) return;
+
+            selector.innerHTML = '<option value="">Select or add a child</option>' + 
+                children.map(child => `<option value="${child.id}">${child.name}</option>`).join('');
+            
+            // Also render avatars if container exists
+            renderChildAvatars();
+            renderParentAvatar();
+        }
+
+        function openAddChildModal() {
+            closeModal('childIncomeModal');
+            
+            const data = getData();
+            const childCount = (data.children || []).length;
+            const warning = document.getElementById('childLimitWarning');
+            
+            if (childCount >= 5) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+
+            document.getElementById('newChildName').value = '';
+            document.getElementById('newChildAge').value = '';
+            document.getElementById('childAvatarPreview').textContent = '👶';
+            document.getElementById('childAvatarPreview').style.backgroundImage = 'none';
+            document.getElementById('childAvatarPreview').style.color = '';
+            document.getElementById('childAvatarUpload').value = '';
+            openModal('addChildModal');
+        }
+
+        function previewChildAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('childAvatarPreview');
+                preview.style.backgroundImage = `url('${e.target.result}')`;
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.style.color = 'transparent';
+                preview.textContent = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveNewChild() {
+            const name = document.getElementById('newChildName').value.trim();
+            const age = document.getElementById('newChildAge').value;
+
+            if (!name) {
+                alert('Please enter child\'s name');
+                return;
+            }
+
+            const data = getData();
+            if (!data.children) {
+                data.children = [];
+            }
+
+            // Check child limit
+            if (data.children.length >= 5) {
+                alert('Maximum 5 children allowed. Delete one to add another.');
+                return;
+            }
+
+            // Get avatar if uploaded
+            const avatarUpload = document.getElementById('childAvatarUpload');
+            if (avatarUpload.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    completeChildSave(data, name, age, e.target.result);
+                };
+                reader.readAsDataURL(avatarUpload.files[0]);
+            } else {
+                completeChildSave(data, name, age, null);
+            }
+        }
+
+        function completeChildSave(data, name, age, avatar) {
+            const newChild = {
+                id: Date.now().toString(),
+                name: name,
+                age: age ? parseInt(age) : null,
+                avatar: avatar,
+                createdAt: new Date().toISOString()
+            };
+
+            data.children.push(newChild);
+            saveData(data);
+
+            renderChildSelector();
+            document.getElementById('childSelector').value = newChild.id;
+            closeModal('addChildModal');
+            showSuccess(`${name} added successfully!`);
+        }
+
+        function uploadBanner(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = getData();
+                data.banner = e.target.result;
+                saveData(data);
+                renderBanner();
+                showSuccess('Banner uploaded!');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderBanner() {
+            const data = getData();
+            const image = document.getElementById('bannerImage');
+            const placeholder = document.getElementById('bannerPlaceholder');
+
+            if (data.banner) {
+                image.style.backgroundImage = `url('${data.banner}')`;
+                image.style.backgroundSize = 'cover';
+                image.style.backgroundPosition = 'center';
+                image.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                image.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+        }
+
+        function clearBanner() {
+            if (!confirm('Remove banner image?')) return;
+            const data = getData();
+            data.banner = null;
+            saveData(data);
+            renderBanner();
+            showSuccess('Banner cleared');
+        }
+
+        function uploadParentAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = getData();
+                data.parentAvatar = e.target.result;
+                saveData(data);
+                renderParentAvatar();
+                showSuccess('Your avatar updated!');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderParentAvatar() {
+            const data = getData();
+            const container = document.getElementById('parentAvatarContainer');
+            
+            if (data.parentAvatar) {
+                container.style.backgroundImage = `url('${data.parentAvatar}')`;
+                container.style.backgroundSize = 'cover';
+                container.style.backgroundPosition = 'center';
+                container.style.fontSize = '0';
+                container.textContent = '';
+            } else {
+                container.style.backgroundImage = 'linear-gradient(135deg, #FF9800 0%, #FFE4CC 100%)';
+                container.style.fontSize = '3rem';
+                container.textContent = '👩';
+            }
+        }
+
+        function uploadChildAvatar(childId, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = getData();
+                const child = data.children.find(c => c.id === childId);
+                if (child) {
+                    child.avatar = e.target.result;
+                    saveData(data);
+                    renderChildAvatars();
+                    showSuccess('Avatar updated!');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderChildAvatars() {
+            const data = getData();
+            const children = data.children || [];
+            const container = document.getElementById('childrenAvatars');
+
+            if (children.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = children.map(child => {
+                const hasAvatar = child.avatar;
+                const colors = ['#4A90E2', '#FFB90F', '#FF9A56', '#FF6B9D'];
+                const color = colors[children.indexOf(child) % colors.length];
+                const bgStyle = hasAvatar 
+                    ? `background-image: url('${child.avatar}'); background-size: cover; background-position: center; font-size: 0;`
+                    : `background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%); font-size: 2.5rem;`;
+
+                return `
+                    <div style="text-align: center;">
+                        <div id="childAvatar-${child.id}" style="width: 100px; height: 100px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid var(--border); transition: all 0.3s; ${bgStyle}" onclick="document.getElementById('childAvatarUpload-${child.id}').click()" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            ${!hasAvatar ? '👶' : ''}
+                        </div>
+                        <div style="font-weight: 700; margin-bottom: 0.5rem;">${escapeHtml(child.name)}</div>
+                        <input type="file" id="childAvatarUpload-${child.id}" accept="image/*" style="display: none;" onchange="uploadChildAvatar('${child.id}', event)">
+                        <button class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 0.5rem;" onclick="document.getElementById('childAvatarUpload-${child.id}').click()">Upload Photo</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChildContributions() {
+            const data = getData();
+            const childIncome = data.childIncome || [];
+            const parentIncome = data.income || [];
+
+            const childTotal = childIncome.reduce((sum, item) => sum + item.amount, 0);
+            const parentTotal = parentIncome.reduce((sum, item) => sum + item.amount, 0);
+            const combinedTotal = childTotal + parentTotal;
+            const goal = parseFloat(data.goalAmount) || 0;
+
+            document.getElementById('childContribTotal').textContent = `$${childTotal.toFixed(2)}`;
+            document.getElementById('parentContribTotal').textContent = `$${parentTotal.toFixed(2)}`;
+            document.getElementById('combinedTotal').textContent = `$${combinedTotal.toFixed(2)}`;
+
+            const parentPercent = goal > 0 ? Math.round((parentTotal / goal) * 100) : 0;
+            const childPercent = goal > 0 ? Math.round((childTotal / goal) * 100) : 0;
+
+            document.getElementById('parentPercentage').textContent = `${parentPercent}% of goal`;
+            document.getElementById('childPercentage').textContent = `${childPercent}% of goal`;
+
+            document.getElementById('parentProgressBar').style.width = `${Math.min(100, parentPercent)}%`;
+            document.getElementById('childProgressBar').style.width = `${Math.min(100, childPercent)}%`;
+
+            if (goal > 0) {
+                const remaining = Math.max(0, goal - combinedTotal);
+                document.getElementById('goingTo').textContent = remaining === 0 ? 'Goal reached! 🎉' : `$${remaining.toFixed(2)} to goal`;
+            }
+
+            // Update trip plan display
+            document.getElementById('yourSavings').textContent = `$${parentTotal.toFixed(2)}`;
+            document.getElementById('childSavings').textContent = `$${childTotal.toFixed(2)}`;
+            document.getElementById('totalGoalProgress').textContent = `$${combinedTotal.toFixed(2)} / $${goal.toFixed(2)}`;
+        }
+
+        function viewChildTransactions() {
+            const data = getData();
+            const childIncome = data.childIncome || [];
+            const tbody = document.querySelector('#childTransactionsTable tbody');
+            const childrenSummary = document.getElementById('childrenSummary');
+
+            if (childIncome.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No contributions logged</td></tr>';
+                if (childrenSummary) childrenSummary.innerHTML = '';
+                openModal('childTransactionsModal');
+                return;
+            }
+
+            // Show summary for each child with avatars
+            if (childrenSummary) {
+                const childTotals = {};
+                const children = data.children || [];
+                childIncome.forEach(item => {
+                    if (!childTotals[item.childName]) {
+                        childTotals[item.childName] = { total: 0, id: item.childId };
+                    }
+                    childTotals[item.childName].total += item.amount;
+                });
+
+                const colors = ['#4A90E2', '#FFB90F', '#FF9A56', '#FF6B9D'];
+                childrenSummary.innerHTML = Object.entries(childTotals)
+                    .map(([name, data], idx) => {
+                        const child = children.find(c => c.id === data.id);
+                        const hasAvatar = child && child.avatar;
+                        return `
+                            <div style="padding: 1rem; background: var(--background); border-radius: 8px; border-left: 4px solid ${colors[idx % colors.length]}; text-align: center;">
+                                <div style="width: 60px; height: 60px; margin: 0 auto 0.5rem; border-radius: 50%; overflow: hidden; background: white; display: flex; align-items: center; justify-content: center; ${hasAvatar ? `background-image: url('${child.avatar}'); background-size: cover; background-position: center;` : ''}">
+                                    ${!hasAvatar ? '<div style="font-size: 2rem;">👶</div>' : ''}
+                                </div>
+                                <div style="font-weight: 700; margin-bottom: 0.5rem;">${escapeHtml(name)}</div>
+                                <div style="font-size: 1.5rem; font-weight: 800; color: ${colors[idx % colors.length]};">$${data.total.toFixed(2)}</div>
+                            </div>
+                        `;
+                    }).join('');
+            }
+
+            const sorted = childIncome.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+            tbody.innerHTML = sorted.map(item => `
+                <tr>
+                    <td>${formatDate(item.date)}</td>
+                    <td style="font-weight: 600;">${escapeHtml(item.childName)}</td>
+                    <td>${escapeHtml(item.source)}</td>
+                    <td class="amount positive">+$${item.amount.toFixed(2)}</td>
+                    <td><button class="btn btn-secondary btn-small" onclick="deleteChildIncome(${item.id})">Delete</button></td>
+                </tr>
+            `).join('');
+
+            openModal('childTransactionsModal');
+        }
+
+        function deleteChildIncome(id) {
+            if (!confirm('Delete this contribution?')) return;
+            const data = getData();
+            if (data.childIncome) {
+                data.childIncome = data.childIncome.filter(item => item.id !== id);
+                saveData(data);
+                updateMetrics();
+                renderChildContributions();
+                viewChildTransactions();
+            }
+        }
+
+        function addPhoto() {
+            const fileInput = document.getElementById('photoUpload');
+            if (!fileInput.files.length) {
+                alert('Please select a photo');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const data = getData();
+                if (!data.photos) {
+                    data.photos = [];
+                }
+
+                data.photos.push({
+                    id: Date.now(),
+                    data: e.target.result,
+                    timestamp: new Date().toISOString()
+                });
+
+                saveData(data);
+                renderPhotos();
+                fileInput.value = '';
+                showSuccess('Photo added!');
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function renderPhotos() {
+            const data = getData();
+            const photos = data.photos || [];
+            const gallery = document.getElementById('photoGallery');
+
+            if (photos.length === 0) {
+                gallery.innerHTML = `
+                    <div style="grid-column: 1 / -1; background: var(--background); border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--text-secondary);">
+                        <p>No photos yet. Upload some!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            gallery.innerHTML = photos.map(photo => `
+                <div style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img src="${photo.data}" style="width: 100%; height: 200px; object-fit: cover; display: block;">
+                    <button class="btn btn-secondary" style="position: absolute; bottom: 10px; right: 10px; padding: 0.5rem 0.75rem; font-size: 0.8rem;" onclick="deletePhoto(${photo.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function deletePhoto(id) {
+            if (!confirm('Delete this photo?')) return;
+            const data = getData();
+            if (data.photos) {
+                data.photos = data.photos.filter(photo => photo.id !== id);
+                saveData(data);
+                renderPhotos();
+                showSuccess('Photo deleted');
+            }
+        }
+
+        function clearPhotos() {
+            if (!confirm('Delete all photos?')) return;
+            const data = getData();
+            data.photos = [];
+            saveData(data);
+            renderPhotos();
+            showSuccess('All photos cleared');
+        }
+
+        function updateMetrics() {
+            const data = getData();
+            const total = data.income.reduce((sum, item) => sum + item.amount, 0);
+            const goal = parseFloat(data.goalAmount) || 0;
+            const remaining = Math.max(0, goal - total);
+            const percent = goal > 0 ? Math.round((total / goal) * 100) : 0;
+
+            document.getElementById('savedDisplay').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('goalDisplay').textContent = `$${goal.toFixed(2)}`;
+            document.getElementById('remainingMetric').textContent = `$${remaining.toFixed(2)}`;
+            document.getElementById('percentDisplay').textContent = `${percent}%`;
+
+            let status = 'On track';
+            if (goal > 0 && remaining <= 0) status = 'Complete!';
+            else if (goal > 0 && percent < 25) status = 'Just starting';
+            else if (percent > 75) status = 'Almost there';
+            document.getElementById('statusDisplay').textContent = status;
+
+            updateProgressChart(percent);
+            updateTrendChart();
+        }
+
+        function updateProgressChart(percent) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            
+            if (progressChart) {
+                progressChart.data.datasets[0].data = [percent, 100 - percent];
+                progressChart.update();
+            } else {
+                progressChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [percent, 100 - percent],
+                            backgroundColor: [
+                                '#F4C430',
+                                '#FFF8DC'
+                            ],
+                            borderColor: '#FFFFFF',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateTrendChart() {
+            const data = getData();
+            const monthlyData = {};
+
+            data.income.forEach(item => {
+                const month = new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                if (!monthlyData[month]) monthlyData[month] = 0;
+                monthlyData[month] += item.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort();
+            const amounts = months.map(m => monthlyData[m]);
+            const cumulative = amounts.reduce((acc, amt, i) => {
+                acc[i] = (acc[i-1] || 0) + amt;
+                return acc;
+            }, {});
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChart) {
+                trendChart.data.labels = months;
+                trendChart.data.datasets[0].data = Object.values(cumulative);
+                trendChart.update();
+            } else {
+                trendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: 'Cumulative Savings',
+                            data: Object.values(cumulative),
+                            borderColor: '#FF9800',
+                            backgroundColor: 'rgba(255, 228, 204, 0.4)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#F4C430'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderIncomeBySource() {
+            const data = getData();
+            const sources = {};
+
+            data.income.forEach(item => {
+                if (!sources[item.source]) sources[item.source] = 0;
+                sources[item.source] += item.amount;
+            });
+
+            const container = document.getElementById('incomeBySourceChart');
+            if (Object.keys(sources).length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No income logged</p></div>';
+                return;
+            }
+
+            const total = Object.values(sources).reduce((a, b) => a + b, 0);
+            const colorPairs = [
+                ['#4A90E2', '#D4E4FF'],
+                ['#FFB90F', '#FFF3D9'],
+                ['#FF9A56', '#FFD9C9'],
+                ['#FF6B9D', '#FFD9E8'],
+                ['#2E5C8A', '#D4E6F1'],
+                ['#FF7F50', '#FFD0B3']
+            ];
+            
+            const html = Object.entries(sources)
+                .sort(([, a], [, b]) => b - a)
+                .map(([source, amount], idx) => {
+                    const percent = ((amount / total) * 100).toFixed(1);
+                    const colorPair = colorPairs[idx % colorPairs.length];
+                    return `
+                        <div class="bar-item">
+                            <div class="bar-label">${source}</div>
+                            <div class="bar-background">
+                                <div class="bar-fill" style="width: ${percent}%; background: ${colorPair[0]};"></div>
+                            </div>
+                            <div class="bar-value">$${amount.toFixed(2)}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderRecentTransactions() {
+            const data = getData();
+            const recent = data.income.slice().reverse().slice(0, 5);
+            const tbody = document.querySelector('#recentTransactionsTable tbody');
+
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transactions</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recent.map(item => `
+                <tr>
+                    <td>${formatDate(item.date)}</td>
+                    <td>${escapeHtml(item.source)}</td>
+                    <td class="amount positive">+$${item.amount.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderIncomeLog() {
+            const data = getData();
+            const sorted = data.income.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbody = document.querySelector('#incomeTable tbody');
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No transactions</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map(item => `
+                <tr>
+                    <td>${formatDate(item.date)}</td>
+                    <td>${escapeHtml(item.source)}</td>
+                    <td>${item.notes ? escapeHtml(item.notes) : '-'}</td>
+                    <td class="amount positive">+$${item.amount.toFixed(2)}</td>
+                    <td><button class="btn btn-secondary btn-small" onclick="deleteIncome(${item.id})">Delete</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderMonthlySummary() {
+            const data = getData();
+            const monthlyData = {};
+
+            data.income.forEach(item => {
+                const month = new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                if (!monthlyData[month]) monthlyData[month] = 0;
+                monthlyData[month] += item.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort();
+            const tbody = document.querySelector('#monthlySummaryTable tbody');
+
+            if (months.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No data</td></tr>';
+                return;
+            }
+
+            let cumulative = 0;
+            tbody.innerHTML = months.map(month => {
+                const amount = monthlyData[month];
+                cumulative += amount;
+                return `
+                    <tr>
+                        <td>${month}</td>
+                        <td class="amount positive">+$${amount.toFixed(2)}</td>
+                        <td class="amount">$${cumulative.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderMilestones() {
+            const data = getData();
+            const goal = parseFloat(data.goalAmount) || 10000;
+            const total = data.income.reduce((sum, item) => sum + item.amount, 0);
+
+            const milestones = [
+                { amount: goal * 0.25, name: '25% - Dreamer' },
+                { amount: goal * 0.50, name: '50% - Believer' },
+                { amount: goal * 0.75, name: '75% - Almost There' },
+                { amount: goal, name: '100% - Adventure' }
+            ];
+
+            const container = document.getElementById('milestonesDisplay');
+            const html = milestones.map((m, idx) => {
+                const unlocked = total >= m.amount;
+                const color = ['#F59E0B', '#EC4899', '#10B981', '#3B82F6'][idx];
+                return `
+                    <div class="bar-item">
+                        <div class="bar-label" style="font-weight: 700;">${m.name}</div>
+                        <div class="bar-background">
+                            <div class="bar-fill" style="width: ${Math.min(100, (total / m.amount) * 100)}%; background: ${color};"></div>
+                        </div>
+                        <div class="bar-value">${unlocked ? '✓' : Math.round((total / m.amount) * 100) + '%'}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+
+            const nextMilestone = milestones.find(m => total < m.amount);
+            document.getElementById('nextMilestoneMetric').textContent = nextMilestone ? nextMilestone.name.split(' - ')[1] : 'Complete!';
+        }
+
+        function renderAffirmations() {
+            const allAffirmations = [
+                ...affirmations.manifestations,
+                ...affirmations.abundance,
+                ...affirmations.mother,
+                ...affirmations.gratitude
+            ];
+
+            const colorPairs = [
+                { bg: '#FFF8DC', border: '#F4C430' },
+                { bg: '#FFE4CC', border: '#FF9800' },
+                { bg: '#FFB3A3', border: '#FF6347' },
+                { bg: '#F8BBD0', border: '#E91E63' },
+                { bg: '#BBDEFB', border: '#2196F3' }
+            ];
+
+            const html = allAffirmations.map((aff, idx) => {
+                const colors = colorPairs[idx % colorPairs.length];
+                return `
+                <div class="card" style="background: ${colors.bg}; border-left: 4px solid ${colors.border};">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">${aff.icon}</div>
+                    <p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-primary);">"${aff.text}"</p>
+                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.85rem;" onclick="copyAffirmation('${escapeHtml(aff.text)}')">Copy</button>
+                </div>
+            `;
+            }).join('');
+
+            document.getElementById('affirmationsDisplay').innerHTML = html;
+        }
+
+        function renderLessons() {
+            const allLessons = [
+                ...richDadLessons.principles,
+                ...richDadLessons.mindset,
+                ...richDadLessons.strategies
+            ];
+
+            const colorPairs = [
+                { bg: '#FFF8DC', border: '#F4C430', icon: '💡' },
+                { bg: '#FFE4CC', border: '#FF9800', icon: '🎯' },
+                { bg: '#FFB3A3', border: '#FF6347', icon: '💪' },
+                { bg: '#F8BBD0', border: '#E91E63', icon: '✨' },
+                { bg: '#BBDEFB', border: '#2196F3', icon: '🚀' }
+            ];
+
+            const html = allLessons.map((lesson, idx) => {
+                const colors = colorPairs[idx % colorPairs.length];
+                return `
+                <div class="card" style="background: ${colors.bg}; border-left: 4px solid ${colors.border};">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">${lesson.icon || colors.icon}</div>
+                    <div class="card-subtitle" style="margin-bottom: 0.5rem; color: ${colors.border}; font-weight: 700;">${lesson.category}</div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-primary);">${lesson.title}</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6;">${lesson.content}</p>
+                    <div style="padding: 0.75rem; background: white; border-left: 3px solid ${colors.border}; border-radius: 4px; font-size: 0.85rem; line-height: 1.6;">
+                        <strong>Your action:</strong> ${lesson.action}
+                    </div>
+                </div>
+            `;
+            }).join('');
+
+            document.getElementById('lessonsDisplay').innerHTML = html;
+        }
+
+        function renderWishlist() {
+            const data = getData();
+            const tbody = document.querySelector('#wishlistTable tbody');
+
+            if (data.wishlist.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Add activities</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.wishlist.map(item => `
+                <tr>
+                    <td>${escapeHtml(item.text)}</td>
+                    <td><button class="btn btn-secondary btn-small" onclick="deleteWishlist(${item.id})">Remove</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addWishlistItem() {
+            const input = document.getElementById('newWishlistItem');
+            const item = input.value.trim();
+            if (!item) return;
+
+            const data = getData();
+            data.wishlist.push({ id: Date.now(), text: item });
+            saveData(data);
+            input.value = '';
+            renderWishlist();
+            showSuccess('Activity added');
+        }
+
+        function deleteWishlist(id) {
+            const data = getData();
+            data.wishlist = data.wishlist.filter(item => item.id !== id);
+            saveData(data);
+            renderWishlist();
+        }
+
+        function deleteIncome(id) {
+            if (!confirm('Delete this transaction?')) return;
+            const data = getData();
+            data.income = data.income.filter(item => item.id !== id);
+            saveData(data);
+            updateMetrics();
+            renderRecentTransactions();
+            renderIncomeLog();
+            renderIncomeBySource();
+            renderMilestones();
+            renderMonthlySummary();
+            renderBudgetBarChart();
+            renderIncomeDistributionChart();
+            renderCalendarView();
+            renderMonthlyGoals();
+            renderOverviewStats();
+        }
+
+        function saveTripGoal() {
+            const goalAmount = parseFloat(document.getElementById('tripGoalAmount').value);
+            
+            if (!goalAmount || goalAmount <= 0) {
+                alert('Please enter a valid goal amount');
+                return;
+            }
+
+            const data = getData();
+            data.goalAmount = goalAmount;
+            saveData(data);
+
+            updateMetrics();
+            renderMilestones();
+            renderChildContributions();
+            showSuccess(`Goal set to $${goalAmount.toFixed(2)}`);
+        }
+
+        function saveTripDetails() {
+            const data = getData();
+            data.destination = document.getElementById('destination').value;
+            data.tripDescription = document.getElementById('tripDescription').value;
+            data.travelers = document.getElementById('travelers').value;
+            data.tripDate = document.getElementById('tripDate').value;
+            
+            // Save trip goal amount if set
+            const tripGoalEl = document.getElementById('tripGoalAmount');
+            if (tripGoalEl && tripGoalEl.value) {
+                data.goalAmount = parseFloat(tripGoalEl.value) || 0;
+            }
+            
+            // Save trip estimate data
+            data.tripEstimate = {
+                originCity: document.getElementById('originCity').value,
+                destinationCity: document.getElementById('destinationCity').value,
+                tripDuration: parseInt(document.getElementById('tripDuration').value) || 0,
+                flightCost: parseFloat(document.getElementById('flightCost').value) || 0,
+                hotelCostPerNight: parseFloat(document.getElementById('hotelCostPerNight').value) || 0,
+                dailyActivities: parseFloat(document.getElementById('dailyActivities').value) || 0,
+                dailyFood: parseFloat(document.getElementById('dailyFood').value) || 0
+            };
+            
+            saveData(data);
+
+            if (data.tripDate) {
+                const start = new Date();
+                const end = new Date(data.tripDate);
+                const dateStr = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}`;
+                document.getElementById('dateRangeDisplay').textContent = dateStr;
+            }
+
+            calculateTripCost();
+            renderChildContributions();
+            showSuccess('Trip details saved');
+        }
+
+        function saveSettings() {
+            const data = getData();
+            data.userName = document.getElementById('userName').value;
+            data.goalAmount = parseFloat(document.getElementById('goalAmount').value) || 0;
+            saveData(data);
+            updateMetrics();
+            renderMilestones();
+            loadUI();
+            updateGreeting();
+            showSuccess('Settings saved');
+        }
+
+        function exportData() {
+            const data = getData();
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trip-fund-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+                    location.reload();
+                } catch {
+                    alert('Invalid backup file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetData() {
+            if (!confirm('Clear all data?')) return;
+            if (!confirm('This cannot be undone.')) return;
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+
+        function showSuccess(message) {
+            const msg = document.createElement('div');
+            msg.className = 'success-message';
+            msg.textContent = message;
+            document.querySelector('.container').insertBefore(msg, document.querySelector('.tabs'));
+            setTimeout(() => msg.remove(), 3000);
+        }
+
+        function copyAffirmation(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccess('Copied to clipboard');
+            });
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function calculateTripCost() {
+            // Check if elements exist before trying to access them
+            const tripDurationEl = document.getElementById('tripDuration');
+            const flightCostEl = document.getElementById('flightCost');
+            const hotelCostPerNightEl = document.getElementById('hotelCostPerNight');
+            const dailyActivitiesEl = document.getElementById('dailyActivities');
+            const dailyFoodEl = document.getElementById('dailyFood');
+            const estimatedTotalCostEl = document.getElementById('estimatedTotalCost');
+            const savingsNeededEl = document.getElementById('savingsNeeded');
+            const savingsDescriptionEl = document.getElementById('savingsDescription');
+            const tripDateEl = document.getElementById('tripDate');
+
+            // If any required elements don't exist, skip calculation
+            if (!tripDurationEl || !estimatedTotalCostEl) {
+                return;
+            }
+
+            const duration = parseInt(tripDurationEl.value) || 0;
+            const flights = parseFloat(flightCostEl?.value) || 0;
+            const hotelPerNight = parseFloat(hotelCostPerNightEl?.value) || 0;
+            const dailyActivities = parseFloat(dailyActivitiesEl?.value) || 0;
+            const dailyFood = parseFloat(dailyFoodEl?.value) || 0;
+
+            // Calculate total
+            const hotelTotal = hotelPerNight * duration;
+            const activitiesTotal = dailyActivities * duration;
+            const foodTotal = dailyFood * duration;
+            const estimatedTotal = flights + hotelTotal + activitiesTotal + foodTotal;
+
+            // Get current savings
+            const data = getData();
+            const currentSavings = data.income.reduce((sum, item) => sum + item.amount, 0);
+            const savingsNeeded = Math.max(0, estimatedTotal - currentSavings);
+
+            estimatedTotalCostEl.textContent = `$${estimatedTotal.toFixed(2)}`;
+            if (savingsNeededEl) savingsNeededEl.textContent = `$${savingsNeeded.toFixed(2)}`;
+
+            if (duration > 0 && savingsDescriptionEl && tripDateEl) {
+                const perDay = (estimatedTotal / duration).toFixed(2);
+                const tripDate = tripDateEl.value;
+                if (tripDate) {
+                    const daysUntilTrip = Math.max(0, Math.ceil((new Date(tripDate) - new Date()) / (1000 * 60 * 60 * 24)));
+                    if (daysUntilTrip > 0) {
+                        const perDayNeeded = (savingsNeeded / daysUntilTrip).toFixed(2);
+                        savingsDescriptionEl.textContent = `$${perDay}/day trip • Need $${perDayNeeded}/day to reach goal`;
+                    } else {
+                        savingsDescriptionEl.textContent = `$${perDay}/day average cost`;
+                    }
+                }
+            }
+        }
+
+        function applyEstimatedCost() {
+            const estimatedCost = parseFloat(document.getElementById('estimatedTotalCost').textContent.replace('$', '')) || 0;
+            if (estimatedCost === 0) {
+                alert('Please fill in trip details first');
+                return;
+            }
+
+            const data = getData();
+            data.goalAmount = estimatedCost;
+            saveData(data);
+            document.getElementById('goalAmount').value = estimatedCost;
+            updateMetrics();
+            renderMilestones();
+            showSuccess(`Goal updated to $${estimatedCost.toFixed(2)}`);
+        }
+
+        function renderBudgetBarChart() {
+            const data = getData();
+            const sources = {};
+
+            data.income.forEach(item => {
+                if (!sources[item.source]) sources[item.source] = 0;
+                sources[item.source] += item.amount;
+            });
+
+            const container = document.getElementById('budgetBarChart');
+            if (Object.keys(sources).length === 0) {
+                container.innerHTML = '<div class="empty-state" style="padding: 2rem 0;"><p>No income logged</p></div>';
+                return;
+            }
+
+            const total = Object.values(sources).reduce((a, b) => a + b, 0);
+            const colorPairs = [
+                ['#4A90E2', '#D4E4FF'],
+                ['#FFB90F', '#FFF3D9'],
+                ['#FF9A56', '#FFD9C9'],
+                ['#FF6B9D', '#FFD9E8'],
+                ['#2E5C8A', '#D4E6F1'],
+                ['#FF7F50', '#FFD0B3']
+            ];
+            
+            const html = Object.entries(sources)
+                .sort(([, a], [, b]) => b - a)
+                .map(([source, amount], idx) => {
+                    const percent = ((amount / total) * 100).toFixed(1);
+                    const colorPair = colorPairs[idx % colorPairs.length];
+                    return `
+                        <div class="bar-item">
+                            <div class="bar-label">${source}</div>
+                            <div class="bar-background">
+                                <div class="bar-fill" style="width: ${percent}%; background: ${colorPair[0]};"></div>
+                            </div>
+                            <div class="bar-value">${percent}%</div>
+                        </div>
+                    `;
+                }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderIncomeDistributionChart() {
+            const data = getData();
+            const sources = {};
+            const colorPairs = [
+                ['#4A90E2', '#D4E4FF'],
+                ['#FFB90F', '#FFF3D9'],
+                ['#FF9A56', '#FFD9C9'],
+                ['#FF6B9D', '#FFD9E8'],
+                ['#2E5C8A', '#D4E6F1'],
+                ['#FF7F50', '#FFD0B3']
+            ];
+
+            data.income.forEach(item => {
+                if (!sources[item.source]) sources[item.source] = 0;
+                sources[item.source] += item.amount;
+            });
+
+            const total = Object.values(sources).reduce((a, b) => a + b, 0);
+            document.getElementById('totalIncomeValue').textContent = `$${total.toFixed(0)}`;
+
+            if (Object.keys(sources).length === 0) return;
+
+            const ctx = document.getElementById('incomeDistributionChart').getContext('2d');
+            const sourceLabels = Object.keys(sources);
+            const sourceValues = Object.values(sources);
+
+            if (incomeDistributionChart) {
+                incomeDistributionChart.data.labels = sourceLabels;
+                incomeDistributionChart.data.datasets[0].data = sourceValues;
+                incomeDistributionChart.data.datasets[0].backgroundColor = colors.slice(0, sourceLabels.length);
+                incomeDistributionChart.update();
+            } else {
+                incomeDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: sourceLabels,
+                        datasets: [{
+                            data: sourceValues,
+                            backgroundColor: colorPairs.slice(0, sourceLabels.length).map(pair => pair[0]),
+                            borderColor: '#FFFFFF',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { size: 12 },
+                                    padding: 15
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderCalendarView() {
+            const data = getData();
+            if (data.income.length === 0) {
+                document.getElementById('calendarContainer').innerHTML = '<div class="empty-state" style="padding: 2rem 1rem;"><p>No transactions to display</p></div>';
+                return;
+            }
+
+            // Get current year and range of dates
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            
+            // Find the earliest transaction date to determine start month
+            const dates = data.income.map(item => new Date(item.date));
+            const minDate = new Date(Math.min(...dates));
+            const startMonth = minDate.getMonth();
+            const startYear = minDate.getFullYear();
+            
+            // Create a map of dates with transaction info
+            const transactionMap = {};
+            data.income.forEach(item => {
+                const dateKey = item.date;
+                if (!transactionMap[dateKey]) transactionMap[dateKey] = [];
+                transactionMap[dateKey].push({ source: item.source, amount: item.amount });
+            });
+
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            let html = '';
+            let currentMonth = startMonth;
+            let currentYearCalendar = startYear;
+
+            // Show 12 months from start date
+            for (let i = 0; i < 12; i++) {
+                const monthDate = new Date(currentYearCalendar, currentMonth, 1);
+                const firstDay = monthDate.getDay();
+                const daysInMonth = new Date(currentYearCalendar, currentMonth + 1, 0).getDate();
+
+                html += `
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">${monthNames[currentMonth]} ${currentYearCalendar}</h4>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                            ${dayNames.map(day => `<div style="text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); padding: 0.5rem;">${day}</div>`).join('')}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
+                            ${Array(firstDay).fill().map(() => '<div style="min-height: 50px;"></div>').join('')}
+                            ${Array(daysInMonth).fill().map((_, dayIdx) => {
+                                const day = dayIdx + 1;
+                                const dateStr = `${currentYearCalendar}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                const transactions = transactionMap[dateStr] || [];
+                                const hasTransaction = transactions.length > 0;
+                                const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+                                
+                                let tooltip = '';
+                                if (hasTransaction) {
+                                    tooltip = transactions.map(t => `${t.source}: $${t.amount}`).join('\n');
+                                }
+
+                                return `
+                                    <div style="
+                                        min-height: 50px;
+                                        background: ${hasTransaction ? 'var(--accent-blue)' : 'var(--background)'};
+                                        border: 1px solid ${hasTransaction ? 'var(--accent-blue)' : 'var(--border)'};
+                                        border-radius: 4px;
+                                        display: flex;
+                                        flex-direction: column;
+                                        align-items: center;
+                                        justify-content: center;
+                                        padding: 0.5rem;
+                                        cursor: ${hasTransaction ? 'pointer' : 'default'};
+                                        transition: all 0.2s;
+                                        position: relative;
+                                    "
+                                    title="${tooltip}"
+                                    ${hasTransaction ? `onmouseover="this.style.background='var(--accent-light)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.25)'"` : ''}
+                                    ${hasTransaction ? `onmouseout="this.style.background='var(--accent-blue)'; this.style.boxShadow='none'"` : ''}>
+                                        <div style="font-size: 0.85rem; font-weight: 700; ${hasTransaction ? 'color: white;' : 'color: var(--text-secondary);'}">${day}</div>
+                                        ${hasTransaction ? `<div style="font-size: 0.7rem; font-weight: 700; ${hasTransaction ? 'color: white;' : 'color: var(--text-secondary);'} margin-top: 0.25rem;">$${totalAmount.toFixed(0)}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYearCalendar++;
+                }
+            }
+
+            document.getElementById('calendarContainer').innerHTML = html;
+        }
+
+        function renderMonthlyGoals() {
+            const data = getData();
+            const goal = parseFloat(data.goalAmount) || 0;
+            if (goal === 0) {
+                document.getElementById('monthlyGoalsChart').innerHTML = '<div class="empty-state" style="padding: 1rem 0;"><p style="font-size: 0.85rem;">Set your goal in Settings</p></div>';
+                return;
+            }
+
+            const monthlyData = {};
+            data.income.forEach(item => {
+                const month = new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                if (!monthlyData[month]) monthlyData[month] = 0;
+                monthlyData[month] += item.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort();
+            const monthlyGoal = goal / 12;
+            const colorPairs = [
+                ['#4A90E2', '#D4E4FF'],
+                ['#FFB90F', '#FFF3D9'],
+                ['#FF9A56', '#FFD9C9'],
+                ['#FF6B9D', '#FFD9E8'],
+                ['#2E5C8A', '#D4E6F1'],
+                ['#FF7F50', '#FFD0B3']
+            ];
+
+            const html = months.map((month, idx) => {
+                const amount = monthlyData[month];
+                const percent = Math.min(100, (amount / monthlyGoal) * 100);
+                const colorPair = colorPairs[idx % colorPairs.length];
+                return `
+                    <div class="bar-item">
+                        <div class="bar-label">${month}</div>
+                        <div class="bar-background">
+                            <div class="bar-fill" style="width: ${percent}%; background: ${colorPair[0]};"></div>
+                        </div>
+                        <div class="bar-value">$${amount.toFixed(0)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('monthlyGoalsChart').innerHTML = html;
+        }
+
+        function renderOverviewStats() {
+            const data = getData();
+            const total = data.income.reduce((sum, item) => sum + item.amount, 0);
+            const goal = parseFloat(data.goalAmount) || 0;
+            const remaining = Math.max(0, goal - total);
+            const percent = goal > 0 ? Math.round((total / goal) * 100) : 0;
+
+            const months = new Set(data.income.map(item => new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })));
+            const avgMonthly = months.size > 0 ? (total / months.size).toFixed(2) : 0;
+
+            const sources = new Set(data.income.map(item => item.source)).size;
+
+            document.getElementById('overviewTotalSaved').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('overviewGoalAmount').textContent = `$${goal.toFixed(2)}`;
+            document.getElementById('overviewRemaining').textContent = `$${remaining.toFixed(2)}`;
+            document.getElementById('overviewProgress').textContent = `${percent}%`;
+            document.getElementById('overviewAvgMonthly').textContent = `$${avgMonthly}`;
+            document.getElementById('overviewSources').textContent = sources;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                console.log('DOMContentLoaded fired');
+                initApp();
+
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+                });
+
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            modal.classList.remove('active');
+                        }
+                    });
+                });
+                
+                console.log('Event listeners attached');
+            } catch(e) {
+                console.error('Error in DOMContentLoaded:', e);
+            }
+        });
+    </script>
+</body>
+</html>
