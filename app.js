@@ -8,12 +8,14 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
 };
 
-const KEY = 'sa.key';
-const HOURS = 'sa.hours';
-const BANK = 'sa.quizBank';
-const FLAGGED = 'sa.flagged';   // Set<id>
-const ORDER = 'sa.order';       // {id: priority_index}
-const DONE = 'sa.done';         // Set<id> — manually marked complete
+const KEY        = 'sa.key';
+const HOURS      = 'sa.hours';
+const BANK       = 'sa.quizBank';
+const FLAGGED    = 'sa.flagged';   // Set<id>
+const ORDER      = 'sa.order';     // {id: priority_index}
+const DONE       = 'sa.done';      // Set<id> — manually marked complete
+const STATUS_KEY = 'sa.status';    // {id: 'todo'|'in-progress'|'done'}
+const TASKS_KEY  = 'sa.tasks';     // custom manually-added tasks []
 
 function loadFlagged() { return new Set(store.get(FLAGGED, [])); }
 function saveFlagged(s) { store.set(FLAGGED, [...s]); }
@@ -21,6 +23,61 @@ function loadOrder() { return store.get(ORDER, {}); }
 function saveOrder(o) { store.set(ORDER, o); }
 function loadDone() { return new Set(store.get(DONE, [])); }
 function saveDone(s) { store.set(DONE, [...s]); }
+function loadStatus() { return store.get(STATUS_KEY, {}); }
+function saveStatus(m) { store.set(STATUS_KEY, m); }
+function loadCustomTasks() { return store.get(TASKS_KEY, []); }
+function saveCustomTasks(arr) { store.set(TASKS_KEY, arr); }
+
+/** Get the current 3-state status of an item. */
+function getItemStatus(it) {
+  if (it.submitted) return 'done';
+  if (loadDone().has(it.id)) return 'done';
+  return loadStatus()[it.id] || 'todo';
+}
+
+/** Persist a new status; syncs the legacy DONE set for backward compat. */
+function setItemStatus(id, val) {
+  const statuses = loadStatus();
+  statuses[id] = val;
+  saveStatus(statuses);
+  const done = loadDone();
+  if (val === 'done') done.add(id); else done.delete(id);
+  saveDone(done);
+}
+
+// ---------- confetti ----------
+const CONFETTI_COLORS = ['#7c6ff7','#f26b6b','#54c98f','#f0a050','#46cac2','#b98fff','#ff9fd4'];
+function fireConfetti(anchor) {
+  const rect = anchor ? anchor.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 };
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement('span');
+    el.className = 'confetti-piece';
+    const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    const angle = (i / 20) * 360 + Math.random() * 18 - 9;
+    const dist = 44 + Math.random() * 40;
+    const tx = Math.round(Math.cos((angle * Math.PI) / 180) * dist);
+    const ty = Math.round(Math.sin((angle * Math.PI) / 180) * dist - 20);
+    const delay = Math.random() * 0.08;
+    el.style.cssText = [
+      `position:fixed`,
+      `left:${cx - 3.5}px`,
+      `top:${cy - 3.5}px`,
+      `background:${color}`,
+      `--cx:${tx}px`,
+      `--cr:${Math.round(Math.random()*360)}deg`,
+      `animation-delay:${delay.toFixed(3)}s`,
+      `z-index:9999`,
+      `border-radius:${Math.random() > 0.5 ? '50%' : '2px'}`,
+    ].join(';');
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+    // override cy with spread
+    el.style.top = `${cy - 3.5 + ty * 0}px`;
+    el.style.setProperty('--cx', `${tx}px`);
+  }
+}
 
 // ---------- timezone ----------
 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -70,7 +127,6 @@ function cleanCourse(raw) {
   let s = String(raw || '');
   s = s.replace(/^[A-Z]{2}\d{2}_/, '');
   s = s.replace(/[.\-_]\d{2,3}$/, '');
-  // Insert space between letter run and digit run: PSY110 -> PSY 110
   s = s.replace(/([A-Za-z]{2,})(\d)/, '$1 $2');
   return s.trim();
 }
@@ -103,14 +159,15 @@ function titleLink(it) {
     : esc(it.title);
 }
 
-// ---------- TODAY tab (3-column kanban) ----------
+// ---------- TODAY tab ----------
 function renderToday(plan) {
   const today = localDate();
   const items = plan.items || [];
+  const done = loadDone();
 
-  // Column 1: Due Today
+  // Column 1: Due Today (exclude manually done + Canvas-submitted)
   const dueToday = items
-    .filter((it) => !it.submitted && localDate(new Date(it.dueAt)) === today)
+    .filter((it) => !it.submitted && !done.has(it.id) && localDate(new Date(it.dueAt)) === today)
     .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
 
   // Column 2: Today's study blocks
@@ -119,22 +176,23 @@ function renderToday(plan) {
   // Column 3: On deck — at-risk or starts today, not due today
   const onDeck = items
     .filter((it) => {
-      if (it.submitted) return false;
+      if (it.submitted || done.has(it.id)) return false;
       if (localDate(new Date(it.dueAt)) === today) return false;
       const tier = urgencyTier(it, today);
-      return tier <= 3; // study-today, at-risk tight, behind
+      return tier <= 3;
     })
     .sort((a, b) => urgencyTier(a, today) - urgencyTier(b, today) || new Date(a.dueAt) - new Date(b.dueAt))
-    .slice(0, 8); // cap at 8 to keep column scannable
+    .slice(0, 8);
 
   const tCard = (it) => {
     const tier = urgencyTier(it, today);
     return `
-      <div class="t-card${tier === 0 ? ' urgent' : ''}">
+      <div class="t-card${tier === 0 ? ' urgent' : ''}" data-id="${esc(it.id)}">
         <div class="t-course">${esc(cleanCourse(it.course))}</div>
         <div class="t-title">${titleLink(it)}</div>
         <div class="t-due">Due ${esc(time(it.dueAt))} &middot; ${it.hoursLeft ?? it.hours ?? 0}h</div>
         ${tier >= 2 ? `<div class="t-badge">${urgencyBadge(tier, it)}</div>` : ''}
+        <button class="t-done-btn" data-action="done" data-id="${esc(it.id)}" type="button">✓ Done</button>
       </div>`;
   };
 
@@ -186,6 +244,24 @@ function renderToday(plan) {
     </div>`;
 
   $('#tab-today').innerHTML = `<div class="today-kanban">${col1}${col2}${col3}</div>`;
+
+  // Click delegation for Today tab — mark done
+  $('#tab-today').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="done"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    setItemStatus(id, 'done');
+    const card = btn.closest('.t-card');
+    if (card) {
+      fireConfetti(card);
+      card.style.transition = 'opacity 0.25s, transform 0.22s';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.93) translateY(-4px)';
+      setTimeout(() => renderToday(plan), 260);
+    } else {
+      renderToday(plan);
+    }
+  });
 }
 
 // ---------- WEEK tab ----------
@@ -222,7 +298,7 @@ function renderWeek(plan) {
   $('#tab-week').innerHTML = `<div class="week">${html}</div>`;
 }
 
-// ---------- ALL tab — filters + kanban ----------
+// ---------- ALL tab — filters + date-grouped view ----------
 
 // Filter state persists while the app is open
 const filters = { due: 'all', courses: new Set(), types: new Set() };
@@ -234,7 +310,6 @@ const TYPE_LABELS = {
 
 function applyFilters(items, today) {
   return items.filter((it) => {
-    // Due date
     if (filters.due !== 'all') {
       if (!it.dueAt) return false;
       const dLocal = localDate(new Date(it.dueAt));
@@ -249,9 +324,7 @@ function applyFilters(items, today) {
         if (d < 0 || d > 14) return false;
       }
     }
-    // Course
     if (filters.courses.size > 0 && !filters.courses.has(cleanCourse(it.course))) return false;
-    // Type
     if (filters.types.size > 0 && !filters.types.has(it.type)) return false;
     return true;
   });
@@ -266,8 +339,7 @@ function activeFilterCount() {
 }
 
 function filterBar(plan) {
-  const today = localDate();
-  const items = plan.items || [];
+  const items = allItems(plan);
   const courses = [...new Set(items.map((i) => cleanCourse(i.course)).filter(Boolean))].sort();
   const types = [...new Set(items.map((i) => i.type).filter(Boolean))].sort();
 
@@ -306,15 +378,22 @@ function filterBar(plan) {
     </div>`;
 }
 
-function kanbanCard(it, flagged, done) {
+/** Build an assignment card for the date-grouped view. */
+function kanbanCard(it, flagged) {
   const today = localDate();
   const tier = urgencyTier(it, today);
   const isFlagged = flagged.has(it.id);
-  const isDone = done.has(it.id) || it.submitted;
-  const classes = ['kanban-card', it.atRisk ? 'is-risk' : '', isFlagged ? 'is-flagged' : ''].filter(Boolean).join(' ');
+  const status = getItemStatus(it);
+  const isDone = status === 'done';
+  const classes = ['kanban-card',
+    it.atRisk && !isDone ? 'is-risk' : '',
+    isFlagged ? 'is-flagged' : '',
+  ].filter(Boolean).join(' ');
+
   return `
-    <div class="${classes}" draggable="true" data-id="${esc(it.id)}">
-      <button class="flag-btn" data-action="flag" data-id="${esc(it.id)}" title="${isFlagged ? 'Unflag' : 'Flag as important'}" type="button">${isFlagged ? '★' : '☆'}</button>
+    <div class="${classes}" data-id="${esc(it.id)}">
+      <button class="flag-btn" data-action="flag" data-id="${esc(it.id)}"
+        title="${isFlagged ? 'Unflag' : 'Flag as important'}" type="button">${isFlagged ? '★' : '☆'}</button>
       <div class="course-row">
         <span class="course">${esc(cleanCourse(it.course))}</span>
         ${it.type && TYPE_LABELS[it.type] ? `<span class="chip k-${it.type}">${TYPE_LABELS[it.type]}</span>` : ''}
@@ -323,122 +402,239 @@ function kanbanCard(it, flagged, done) {
       <div class="meta-row">
         <span class="meta">${esc(dueText(it.dueAt))}</span>
         ${it.hoursLeft ?? it.hours ? `<span class="meta">${it.hoursLeft ?? it.hours}h</span>` : ''}
-        ${tier <= 2 ? urgencyBadge(tier, it) : ''}
+        ${tier <= 2 && !isDone ? urgencyBadge(tier, it) : ''}
       </div>
-      ${!isDone ? `<button class="btn ghost small" style="margin-top:7px;font-size:11px;" data-action="done" data-id="${esc(it.id)}" type="button">✓ Mark done</button>` : ''}
+      <select class="status-select" data-action="status" data-id="${esc(it.id)}" aria-label="Status">
+        <option value="todo"${status === 'todo' ? ' selected' : ''}>To Do</option>
+        <option value="in-progress"${status === 'in-progress' ? ' selected' : ''}>In Progress</option>
+        <option value="done"${status === 'done' ? ' selected' : ''}>Done</option>
+      </select>
+      ${it.isCustom ? `<button class="delete-task-btn" data-action="delete-task" data-id="${esc(it.id)}" title="Remove task" type="button">✕</button>` : ''}
     </div>`;
 }
 
-function sortByPriority(items, flagged, order) {
-  return [...items].sort((a, b) => {
-    const fa = flagged.has(a.id) ? 0 : 1;
-    const fb = flagged.has(b.id) ? 0 : 1;
-    if (fa !== fb) return fa - fb;
-    const oa = order[a.id] ?? 9999;
-    const ob = order[b.id] ?? 9999;
-    if (oa !== ob) return oa - ob;
-    return new Date(a.dueAt) - new Date(b.dueAt);
-  });
-}
-
-function renderKanban(plan) {
+/** Render the date-grouped assignment view inside #dateBoard. */
+function renderDateView(plan) {
   const today = localDate();
-  const items = plan.items || [];
+  const items = allItems(plan);
   const flagged = loadFlagged();
-  const order = loadOrder();
-  const done = loadDone();
 
   const filtered = applyFilters(items, today);
-  const active = filtered.filter((i) => !i.submitted && !done.has(i.id));
-  const submitted = filtered.filter((i) => i.submitted || done.has(i.id));
+  const activeItems = filtered.filter((it) => getItemStatus(it) !== 'done');
+  const doneItems   = filtered.filter((it) => getItemStatus(it) === 'done');
 
-  const inProgress = active.filter((i) => i.sessions && i.sessions.some((s) => s.date <= today && s.date >= addDays(today, -7)));
-  const toDo = active.filter((i) => !inProgress.includes(i));
-
-  const emptyMsg = activeFilterCount() > 0 ? 'No matches — try adjusting filters.' : null;
-
-  const col = (title, dot, cardItems, emptyFallback, colId, extraClass = '') => `
-    <div class="kanban-col${extraClass}" data-col="${colId}">
-      <div class="kanban-head">
-        <span class="col-dot ${dot}"></span>
-        <h3>${title}</h3>
-        <span class="kanban-count">${cardItems.length}</span>
-      </div>
-      <div class="kanban-cards" data-col="${colId}">
-        ${cardItems.length
-          ? sortByPriority(cardItems, flagged, order).map((it) => kanbanCard(it, flagged, done)).join('')
-          : `<p class="kanban-empty">${emptyMsg || emptyFallback}</p>`}
-      </div>
-    </div>`;
-
-  document.getElementById('kanbanBoard').innerHTML = `
-    <div class="kanban">
-      ${col('In Progress', 'blue', inProgress, 'Nothing started yet.', 'progress')}
-      ${col('To Do', 'amber', toDo, 'Nothing upcoming.', 'todo')}
-      ${col('Submitted', 'ok', submitted, 'Nothing submitted yet.', 'done', ' col-done')}
-    </div>`;
-
-  // ---- Drag-to-reorder ----
-  let draggingId = null;
-  const board = document.getElementById('kanbanBoard');
-
-  board.addEventListener('dragstart', (e) => {
-    const card = e.target.closest('.kanban-card[data-id]');
-    if (!card) return;
-    draggingId = card.dataset.id;
-    setTimeout(() => card.classList.add('dragging'), 0);
-  });
-
-  board.addEventListener('dragend', (e) => {
-    const card = e.target.closest('.kanban-card[data-id]');
-    if (card) card.classList.remove('dragging');
-    board.querySelectorAll('.kanban-cards').forEach((c) => c.classList.remove('drag-over'));
-    draggingId = null;
-  });
-
-  board.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const col = e.target.closest('.kanban-cards');
-    if (col) col.classList.add('drag-over');
-  });
-
-  board.addEventListener('dragleave', (e) => {
-    const col = e.target.closest('.kanban-cards');
-    if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
-  });
-
-  board.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (!draggingId) return;
-    const targetCol = e.target.closest('.kanban-cards');
-    if (!targetCol) return;
-    targetCol.classList.remove('drag-over');
-
-    // Determine new position: cards in the target column, in DOM order
-    const cards = [...targetCol.querySelectorAll('.kanban-card[data-id]')];
-    const dropTarget = e.target.closest('.kanban-card[data-id]');
-    let newIndex = cards.length;
-    if (dropTarget && dropTarget.dataset.id !== draggingId) {
-      newIndex = cards.indexOf(dropTarget);
+  // Partition active items into overdue and future date buckets
+  const overdueItems = [];
+  const byDate = new Map();
+  activeItems.forEach((it) => {
+    const dLocal = localDate(new Date(it.dueAt));
+    const diff = Math.round((new Date(`${dLocal}T12:00:00Z`) - new Date(`${today}T12:00:00Z`)) / 864e5);
+    if (diff < 0) {
+      overdueItems.push(it);
+    } else {
+      if (!byDate.has(dLocal)) byDate.set(dLocal, []);
+      byDate.get(dLocal).push(it);
     }
+  });
 
-    // Rebuild order for this column with dragged card at new position
-    const ord = loadOrder();
-    const colIds = cards.map((c) => c.dataset.id).filter((id) => id !== draggingId);
-    colIds.splice(newIndex, 0, draggingId);
-    colIds.forEach((id, i) => { ord[id] = i; });
-    saveOrder(ord);
-    renderKanban(plan);
+  // Sort within each group: flagged first, then chronological
+  const sortGroup = (arr) => [...arr].sort((a, b) => {
+    const fa = flagged.has(a.id) ? 0 : 1;
+    const fb = flagged.has(b.id) ? 0 : 1;
+    return fa - fb || new Date(a.dueAt) - new Date(b.dueAt);
+  });
+
+  const groupHeadInner = (label, count) =>
+    `<span class="date-label">${label}</span><span class="date-count">${count}</span>`;
+
+  const dateLabelStr = (d) => {
+    if (d === today) return 'Today';
+    if (d === addDays(today, 1)) return 'Tomorrow';
+    return fmt(`${d}T12:00:00Z`, { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  };
+
+  const cardsGrid = (its) =>
+    `<div class="date-cards">${sortGroup(its).map((it) => kanbanCard(it, flagged)).join('')}</div>`;
+
+  let html = '';
+
+  if (overdueItems.length) {
+    html += `
+      <div class="date-group is-overdue">
+        <div class="date-group-head">${groupHeadInner('Overdue', overdueItems.length)}</div>
+        ${cardsGrid(overdueItems)}
+      </div>`;
+  }
+
+  [...byDate.keys()].sort().forEach((d) => {
+    const cls = d === today ? ' is-today' : '';
+    html += `
+      <div class="date-group${cls}">
+        <div class="date-group-head">${groupHeadInner(dateLabelStr(d), byDate.get(d).length)}</div>
+        ${cardsGrid(byDate.get(d))}
+      </div>`;
+  });
+
+  if (doneItems.length) {
+    const sortedDone = [...doneItems].sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+    html += `
+      <details class="date-group done-group">
+        <summary class="date-group-head">${groupHeadInner('Done / Submitted', doneItems.length)}</summary>
+        ${cardsGrid(sortedDone)}
+      </details>`;
+  }
+
+  if (!html) {
+    const msg = activeFilterCount() > 0
+      ? 'No matches — try adjusting filters.'
+      : 'Nothing to show yet. Sync with Canvas to load your assignments.';
+    html = `<p class="kanban-empty">${msg}</p>`;
+  }
+
+  document.getElementById('dateBoard').innerHTML = html;
+}
+
+/** Merge plan items with custom tasks for the All tab. */
+function allItems(plan) {
+  const planItems = plan.items || [];
+  const custom = loadCustomTasks();
+  if (!custom.length) return planItems;
+  // Give custom tasks minimal plan-compatible shape
+  const shaped = custom.map((t) => ({
+    id: t.id, course: t.course || 'Custom', title: t.title,
+    dueAt: t.dueAt, points: t.points || null, type: t.type || 'homework',
+    description: '', url: null, submitted: false,
+    hours: t.hours || 1, hoursLeft: t.hours || 1,
+    sessions: [], atRisk: false, isCustom: true,
+  }));
+  return [...planItems, ...shaped].sort((a, b) => {
+    if (!a.dueAt) return 1;
+    if (!b.dueAt) return -1;
+    return a.dueAt.localeCompare(b.dueAt);
+  });
+}
+
+/** Show the Add Task modal. */
+function showAddTaskModal(plan) {
+  const courses = [...new Set(allItems(plan).map((i) => cleanCourse(i.course)).filter(Boolean))].sort();
+  const existing = document.getElementById('add-task-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'add-task-modal';
+  modal.innerHTML = `
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>Add task</h2>
+        <button class="btn ghost small" id="closeModal" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Title <span class="req">*</span></label>
+        <input id="nt-title" type="text" placeholder="e.g. Read Chapter 6" autocomplete="off">
+        <label class="field-label">Class</label>
+        <div class="class-row">
+          <select id="nt-course-sel">
+            <option value="">— choose a class —</option>
+            ${courses.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+            <option value="__custom__">+ Type a new class name</option>
+          </select>
+          <input id="nt-course-txt" type="text" placeholder="Class name" style="display:none">
+        </div>
+        <div class="field-row">
+          <div>
+            <label class="field-label">Type</label>
+            <select id="nt-type">
+              <option value="homework">Homework</option>
+              <option value="reading">Reading</option>
+              <option value="quiz">Quiz</option>
+              <option value="exam">Exam</option>
+              <option value="essay">Essay</option>
+              <option value="project">Project</option>
+              <option value="discussion">Discussion</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Due date</label>
+            <input id="nt-due" type="date">
+          </div>
+          <div>
+            <label class="field-label">Est. hours</label>
+            <input id="nt-hours" type="number" min="0.5" max="40" step="0.5" value="1" style="width:80px">
+          </div>
+        </div>
+        <p id="nt-msg" class="muted small" aria-live="polite"></p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" id="cancelModal" type="button">Cancel</button>
+        <button class="btn" id="saveTask" type="button">Add task</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Set default due date to tomorrow
+  const tomorrow = addDays(localDate(), 1);
+  document.getElementById('nt-due').value = tomorrow;
+
+  const close = () => modal.remove();
+  document.getElementById('closeModal').addEventListener('click', close);
+  document.getElementById('cancelModal').addEventListener('click', close);
+  modal.querySelector('.modal-backdrop').addEventListener('click', close);
+
+  // Class selector toggle
+  document.getElementById('nt-course-sel').addEventListener('change', (e) => {
+    const txt = document.getElementById('nt-course-txt');
+    if (e.target.value === '__custom__') { txt.style.display = ''; txt.focus(); }
+    else { txt.style.display = 'none'; txt.value = ''; }
+  });
+
+  document.getElementById('saveTask').addEventListener('click', () => {
+    const title = document.getElementById('nt-title').value.trim();
+    const courseSel = document.getElementById('nt-course-sel').value;
+    const courseTxt = document.getElementById('nt-course-txt').value.trim();
+    const course = courseSel === '__custom__' ? courseTxt : courseSel;
+    const type = document.getElementById('nt-type').value;
+    const dueDate = document.getElementById('nt-due').value;
+    const hours = parseFloat(document.getElementById('nt-hours').value) || 1;
+    const msg = document.getElementById('nt-msg');
+
+    if (!title) { msg.textContent = 'Please enter a title.'; return; }
+    if (!dueDate) { msg.textContent = 'Please pick a due date.'; return; }
+
+    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    const dueAt = new Date(`${dueDate}T23:59:00`).toISOString();
+    const tasks = loadCustomTasks();
+    tasks.push({ id, course: course || 'Custom', title, type, dueAt, hours });
+    saveCustomTasks(tasks);
+    close();
+    renderAll(plan);
   });
 }
 
 function renderAll(plan) {
-  $('#tab-all').innerHTML = `${filterBar(plan)}<div id="kanbanBoard"></div>`;
-  renderKanban(plan);
+  const addBtn = `<button class="btn ghost small" id="addTaskBtn" type="button" style="margin-left:auto">+ Add task</button>`;
+  $('#tab-all').innerHTML = `${filterBar(plan)}<div class="all-header">${addBtn}</div><div id="dateBoard"></div>`;
+  renderDateView(plan);
 
-  // Event delegation for all interactive elements in the tab
+  // Add task button
+  const addTaskBtn = document.getElementById('addTaskBtn');
+  if (addTaskBtn) addTaskBtn.addEventListener('click', () => showAddTaskModal(plan));
+
+  // Click delegation — filter chips and flag buttons
   $('#tab-all').addEventListener('click', (e) => {
-    // Filter chips
+    // Add task from delegation (in case button re-rendered)
+    if (e.target.closest('#addTaskBtn')) { showAddTaskModal(plan); return; }
+
+    // Delete custom task
+    const delBtn = e.target.closest('[data-action="delete-task"]');
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      const tasks = loadCustomTasks().filter((t) => t.id !== id);
+      saveCustomTasks(tasks);
+      renderDateView(plan);
+      return;
+    }
+
     const chip = e.target.closest('.fchip');
     if (chip) {
       if (chip.id === 'clearFilters') {
@@ -449,31 +645,41 @@ function renderAll(plan) {
         else if (group === 'course') { filters.courses.has(val) ? filters.courses.delete(val) : filters.courses.add(val); }
         else if (group === 'type') { filters.types.has(val) ? filters.types.delete(val) : filters.types.add(val); }
       }
-      $('#tab-all').innerHTML = `${filterBar(plan)}<div id="kanbanBoard"></div>`;
-      renderKanban(plan);
+      $('#tab-all').innerHTML = `${filterBar(plan)}<div id="dateBoard"></div>`;
+      renderDateView(plan);
       return;
     }
 
-    // Flag button
     const flagBtn = e.target.closest('[data-action="flag"]');
     if (flagBtn) {
       const id = flagBtn.dataset.id;
       const f = loadFlagged();
       if (f.has(id)) f.delete(id); else f.add(id);
       saveFlagged(f);
-      renderKanban(plan);
+      renderDateView(plan);
       return;
     }
+  });
 
-    // Mark done button
-    const doneBtn = e.target.closest('[data-action="done"]');
-    if (doneBtn) {
-      const id = doneBtn.dataset.id;
-      const d = loadDone();
-      d.add(id);
-      saveDone(d);
-      renderKanban(plan);
+  // Status dropdown change
+  $('#tab-all').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-action="status"]');
+    if (!sel) return;
+    const id = sel.dataset.id;
+    const val = sel.value;
+    setItemStatus(id, val);
+    if (val === 'done') {
+      const card = sel.closest('.kanban-card');
+      if (card) {
+        fireConfetti(card);
+        card.style.transition = 'opacity 0.28s, transform 0.22s';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(-4px) scale(0.95)';
+        setTimeout(() => renderDateView(plan), 300);
+        return;
+      }
     }
+    renderDateView(plan);
   });
 }
 
@@ -637,13 +843,7 @@ function scheduleReview(bank, qs, topic) {
   const intervals = [1, 3, 7, 14];
   qs.forEach((q) => {
     const existing = bank.findIndex((b) => b.q === q.q && b.topic === topic);
-    const entry = {
-      ...q,
-      topic: topic || 'Untitled',
-      nextReview: today,
-      streak: 0,
-      intervals,
-    };
+    const entry = { ...q, topic: topic || 'Untitled', nextReview: today, streak: 0, intervals };
     if (existing >= 0) bank[existing] = entry;
     else bank.push(entry);
   });
@@ -697,6 +897,21 @@ $('#gateForm').addEventListener('submit', async (e) => {
 });
 
 $('#refresh').addEventListener('click', sync);
+
+// ---------- theme toggle ----------
+const THEME_KEY = 'sa.theme';
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const icon = $('#themeToggle .theme-icon');
+  if (icon) icon.textContent = theme === 'light' ? '☾' : '☀︎';
+  store.set(THEME_KEY, theme);
+}
+applyTheme(store.get(THEME_KEY, 'dark'));
+
+$('#themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.dataset.theme || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
 
 $('#lock').addEventListener('click', () => {
   store.del(KEY);
