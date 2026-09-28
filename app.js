@@ -79,6 +79,15 @@ function fireConfetti(anchor) {
   }
 }
 
+// ---------- school week ----------
+function schoolWeek(semesterStart) {
+  if (!semesterStart) return null;
+  const start = new Date(semesterStart + 'T00:00:00');
+  const now = new Date();
+  const week = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+  return week >= 1 && week <= 26 ? week : null;
+}
+
 // ---------- timezone ----------
 const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -162,140 +171,124 @@ function titleLink(it) {
 // ---------- TODAY tab ----------
 function renderToday(plan) {
   const today = localDate();
+  const tomorrow = addDays(today, 1);
+  const dayAfter = addDays(today, 2);
+  const days = [today, tomorrow, dayAfter];
+  const dayLabels = ['Today', 'Tomorrow', dayName(dayAfter).split(', ')[0]];
   const items = plan.items || [];
-  const done = loadDone();
+  const flagged = loadFlagged();
 
-  // Column 1: Due Today (exclude manually done + Canvas-submitted)
-  const dueToday = items
-    .filter((it) => !it.submitted && !done.has(it.id) && localDate(new Date(it.dueAt)) === today)
+  const itemsForDay = (d) => items
+    .filter((it) => !it.submitted && localDate(new Date(it.dueAt)) === d)
     .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
 
-  // Column 2: Today's study blocks
-  const blocks = (plan.blocks || []).filter((b) => b.date === today);
+  const cols = days.map((d, i) => {
+    const due = itemsForDay(d);
+    const isToday = d === today;
 
-  // Column 3: On deck — at-risk or starts today, not due today
-  const onDeck = items
-    .filter((it) => {
-      if (it.submitted || done.has(it.id)) return false;
-      if (localDate(new Date(it.dueAt)) === today) return false;
-      const tier = urgencyTier(it, today);
-      return tier <= 3;
-    })
-    .sort((a, b) => urgencyTier(a, today) - urgencyTier(b, today) || new Date(a.dueAt) - new Date(b.dueAt))
-    .slice(0, 8);
-
-  const tCard = (it) => {
-    const tier = urgencyTier(it, today);
     return `
-      <div class="t-card${tier === 0 ? ' urgent' : ''}" data-id="${esc(it.id)}">
-        <div class="t-course">${esc(cleanCourse(it.course))}</div>
-        <div class="t-title">${titleLink(it)}</div>
-        <div class="t-due">Due ${esc(time(it.dueAt))} &middot; ${it.hoursLeft ?? it.hours ?? 0}h</div>
-        ${tier >= 2 ? `<div class="t-badge">${urgencyBadge(tier, it)}</div>` : ''}
-        <button class="t-done-btn" data-action="done" data-id="${esc(it.id)}" type="button">✓ Done</button>
+      <div class="today-col${isToday ? ' is-today' : ''}">
+        <div class="today-col-head">
+          <h3>${dayLabels[i]}</h3>
+          ${due.length ? `<span class="col-count">${due.length}</span>` : ''}
+        </div>
+        <div class="today-cards">
+          ${due.length ? due.map((it) => kanbanCard(it, flagged)).join('') : '<p class="today-empty">Nothing due.</p>'}
+        </div>
       </div>`;
-  };
+  });
 
-  const blockCard = (b) => `
-    <div class="block-row${b.n === 1 ? ' is-start' : ''}">
-      <div class="block-time">${time(b.start)}<br>${time(b.end)}</div>
-      <div class="block-body">
-        <div class="b-label">${b.n === 1 ? "Start — " : ""}${esc(b.label)}</div>
-        <div class="b-meta">${esc(cleanCourse(b.course))} &middot; ${b.hours}h</div>
-      </div>
-    </div>`;
+  $('#tab-today').innerHTML = `<div class="today-kanban">${cols.join('')}</div>`;
 
-  const col1 = `
-    <div class="today-col">
-      <div class="today-col-head">
-        <span class="col-dot red"></span>
-        <h3>Due Today</h3>
-        <span class="col-count">${dueToday.length}</span>
-      </div>
-      <div class="today-cards">
-        ${dueToday.length ? dueToday.map(tCard).join('') : '<p class="today-empty">Nothing due today.</p>'}
-      </div>
-    </div>`;
-
-  const col2 = `
-    <div class="today-col">
-      <div class="today-col-head">
-        <span class="col-dot blue"></span>
-        <h3>Study Today</h3>
-        <span class="col-count">${blocks.length}</span>
-      </div>
-      <div class="today-cards">
-        ${blocks.length
-          ? blocks.map(blockCard).join('')
-          : '<p class="today-empty">No blocks yet. Add study windows in <code>config.json</code>.</p>'}
-      </div>
-    </div>`;
-
-  const col3 = `
-    <div class="today-col">
-      <div class="today-col-head">
-        <span class="col-dot amber"></span>
-        <h3>On Deck</h3>
-        <span class="col-count">${onDeck.length}</span>
-      </div>
-      <div class="today-cards">
-        ${onDeck.length ? onDeck.map(tCard).join('') : '<p class="today-empty">You\'re all caught up.</p>'}
-      </div>
-    </div>`;
-
-  $('#tab-today').innerHTML = `<div class="today-kanban">${col1}${col2}${col3}</div>`;
-
-  // Click delegation for Today tab — mark done
-  $('#tab-today').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="done"]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    setItemStatus(id, 'done');
-    const card = btn.closest('.t-card');
-    if (card) {
+  // Click delegation for Today tab — status select + flag
+  $('#tab-today').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-action="status"]');
+    if (!sel) return;
+    setItemStatus(sel.dataset.id, sel.value);
+    const card = sel.closest('.kanban-card');
+    if (sel.value === 'done' && card) {
       fireConfetti(card);
       card.style.transition = 'opacity 0.25s, transform 0.22s';
       card.style.opacity = '0';
       card.style.transform = 'scale(0.93) translateY(-4px)';
       setTimeout(() => renderToday(plan), 260);
-    } else {
-      renderToday(plan);
     }
+  });
+  $('#tab-today').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="flag"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const fl = loadFlagged();
+    fl.has(id) ? fl.delete(id) : fl.add(id);
+    saveFlagged(fl);
+    renderToday(plan);
   });
 }
 
 // ---------- WEEK tab ----------
 function renderWeek(plan) {
   const today = localDate();
-  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const flagged = loadFlagged();
 
-  const html = days.map((d) => {
-    const blocks = (plan.blocks || []).filter((b) => b.date === d);
-    const due = (plan.items || []).filter((i) => localDate(new Date(i.dueAt)) === d);
-    const total = blocks.reduce((s, b) => s + (b.hours || 0), 0);
+  const label = (d) => {
+    if (d === today) return 'Today';
+    if (d === addDays(today, 1)) return 'Tomorrow';
+    return dayName(d).split(',')[0]; // "Mon", "Tue", etc.
+  };
+  const sublabel = (d) => {
+    const parts = dayName(d).split(', ');
+    return parts.slice(1).join(', ') || dayName(d); // "Sep 28"
+  };
 
-    const blockHtml = (b) => `
-      <li class="block-item">
-        <div class="when">${time(b.start)}<span>–${time(b.end)}</span></div>
-        <div>
-          <div class="title">${b.n === 1 ? '<b>START</b> · ' : ''}${esc(b.label)} <span class="muted">(${b.n}/${b.of})</span></div>
-          <div class="meta">${esc(cleanCourse(b.course))} — ${esc(b.title)} · ${b.hours}h</div>
-        </div>
-      </li>`;
+  const cols = days.map((d) => {
+    const due = (plan.items || [])
+      .filter((it) => !it.submitted && localDate(new Date(it.dueAt)) === d)
+      .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+    const isToday = d === today;
 
     return `
-      <div class="day-block${d === today ? ' today' : ''}">
-        <div class="day-head">
-          <b>${d === today ? 'Today' : esc(dayName(d).split(',')[0])}</b>
-          <span class="muted">${esc(dayName(d).split(', ').slice(1).join(', ') || dayName(d))}</span>
-          ${total ? `<span class="hrs">${total}h</span>` : ''}
+      <div class="today-col${isToday ? ' is-today' : ''}">
+        <div class="today-col-head">
+          <div>
+            <h3>${label(d)}</h3>
+            <div class="week-sublabel">${sublabel(d)}</div>
+          </div>
+          ${due.length ? `<span class="col-count">${due.length}</span>` : ''}
         </div>
-        ${due.length ? `<div class="due-pills">${due.map((i) => `<span class="due-pill${d === today ? ' urgent' : ''}">${esc(cleanCourse(i.course))} — ${esc(i.title)}</span>`).join('')}</div>` : ''}
-        ${blocks.length ? `<ul class="blocks">${blocks.map(blockHtml).join('')}</ul>` : '<p class="muted small">Free</p>'}
+        <div class="today-cards">
+          ${due.length ? due.map((it) => kanbanCard(it, flagged)).join('') : '<p class="today-empty">Free</p>'}
+        </div>
       </div>`;
-  }).join('');
+  });
 
-  $('#tab-week').innerHTML = `<div class="week">${html}</div>`;
+  $('#tab-week').innerHTML = `<div class="today-kanban week-kanban">${cols.join('')}</div>`;
+
+  // Interactions — status + flag
+  $('#tab-week').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-action="status"]');
+    if (!sel) return;
+    setItemStatus(sel.dataset.id, sel.value);
+    if (sel.value === 'done') {
+      const card = sel.closest('.kanban-card');
+      if (card) {
+        fireConfetti(card);
+        card.style.transition = 'opacity 0.25s, transform 0.22s';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.93) translateY(-4px)';
+        setTimeout(() => renderWeek(plan), 260);
+      }
+    }
+  });
+  $('#tab-week').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="flag"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const fl = loadFlagged();
+    fl.has(id) ? fl.delete(id) : fl.add(id);
+    saveFlagged(fl);
+    renderWeek(plan);
+  });
 }
 
 // ---------- ALL tab — filters + date-grouped view ----------
@@ -865,7 +858,9 @@ async function sync() {
     const data = await api('/api/sync');
     lastPlan = data.plan;
     const synced = new Date(data.plan?.generatedAt);
-    $('#status').textContent = `Synced ${fmt(synced.toISOString(), { weekday: 'short', hour: 'numeric', minute: '2-digit' })} · ${data.source === 'api' ? 'Canvas API' : 'Canvas calendar feed'}`;
+    const week = schoolWeek(data.config?.semesterStart);
+    const weekLabel = week ? `Week ${week} · ` : '';
+    $('#status').textContent = `${weekLabel}Synced ${fmt(synced.toISOString(), { weekday: 'short', hour: 'numeric', minute: '2-digit' })} · ${data.source === 'api' ? 'Canvas API' : 'Canvas calendar feed'}`;
     renderToday(data.plan);
     renderWeek(data.plan);
     renderAll(data.plan);
